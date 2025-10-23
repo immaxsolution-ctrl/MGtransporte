@@ -609,7 +609,8 @@ import { getFirestore, doc, addDoc, onSnapshot, collection, query, where, update
 setLogLevel('debug');
 
 // --- Variables Globales de Firebase ---
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Usar appId global si está disponible
+// CORREGIDO: Usar 'mgtransporte-app' como appId por defecto si __app_id no está definido
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'mgtransporte-app';
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // Usar token global si está disponible
 
 // Your web app's Firebase configuration (FROM USER INPUT - LATEST VERSION, CLEANED)
@@ -735,8 +736,10 @@ authStatusEl.textContent = 'Autenticando usuario...';
 
 onAuthStateChanged(auth, async (user) => {
 if (user) {
-userId = user.uid;
+userId = user.uid; // <-- userId SE ESTABLECE AQUÍ
+console.log("Usuario autenticado (anónimo o con token):", userId);
 authStatusEl.textContent = `✅ Conectado | ID de Usuario: ${userId.slice(0,8)}...`; // Acortar ID visualmente
+// Llamar a los listeners DESPUÉS de tener userId
 listenForVehicles();
 listenForDrivers();
 listenForCustomers();
@@ -780,9 +783,15 @@ showStatus('La configuración de Firebase es inválida o no se encontró.', 'err
 
 
 // --- COLECCIONES ---
-// Asegurarse que userId esté definido antes de usar estas funciones
-// Usar ruta 'public' para datos compartidos si es necesario, o 'users/{userId}' para privados
-const baseCollectionPath = () => userId ? `artifacts/${appId}/users/${userId}` : null; // Ruta base para datos privados
+// CORREGIDO: Las funciones ahora usan directamente userId, asegurándose de que esté definido
+const baseCollectionPath = () => {
+  if (!userId) {
+    console.error("Intentando obtener ruta de colección antes de que userId esté listo.");
+    return null; // Devolver null si userId aún no está disponible
+  }
+  // No usar la variable `appId` del Canvas aquí
+  return `users/${userId}`; // Ruta simplificada: users/{userId}
+};
 
 const VEHICLES_COLLECTION = () => userId ? `${baseCollectionPath()}/vehicles` : null;
 const DRIVERS_COLLECTION = () => userId ? `${baseCollectionPath()}/drivers` : null;
@@ -913,7 +922,11 @@ document.getElementById('vehicle-form').addEventListener('submit', async (e) => 
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
 const collectionPath = VEHICLES_COLLECTION();
-if (!collectionPath) return; // Salir si userId no está listo
+if (!collectionPath) {
+    console.error("No se pudo obtener la ruta de la colección de vehículos.");
+    showStatus('Error: No se pudo conectar a la base de datos (vehículos).', 'error');
+    return;
+}
 
 const vehicleData = {
 model: document.getElementById('vehicle-model').value.trim(),
@@ -934,7 +947,7 @@ showStatus('Error al guardar el vehículo: ' + error.message, 'error');
 function listenForVehicles() {
 if (!userId) return; // Asegurar que userId exista
 const collectionPath = VEHICLES_COLLECTION();
-if (!collectionPath) return;
+if (!collectionPath) return; // Asegurar que la ruta sea válida
 
 const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
@@ -998,7 +1011,11 @@ document.getElementById('driver-form').addEventListener('submit', async (e) => {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
 const collectionPath = DRIVERS_COLLECTION();
-if (!collectionPath) return;
+if (!collectionPath) {
+    console.error("No se pudo obtener la ruta de la colección de choferes.");
+    showStatus('Error: No se pudo conectar a la base de datos (choferes).', 'error');
+    return;
+}
 
 const driverData = {
 name: document.getElementById('driver-name').value.trim(),
@@ -1239,7 +1256,12 @@ document.getElementById('trip-form').addEventListener('submit', async (e) => {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
 const collectionPath = TRIPS_COLLECTION();
-if (!collectionPath) return;
+if (!collectionPath) {
+  showStatus('Error: No se pudo determinar la ruta de la base de datos para viajes.', 'error');
+  console.error("TRIPS_COLLECTION() devolvió null. userId:", userId);
+  return;
+}
+console.log("Intentando guardar en:", collectionPath); // Log para depurar ruta
 
 const tripData = {
 clientName: document.getElementById('client-name').value.trim(),
@@ -1282,7 +1304,9 @@ tripData.status = 'Activo';
 tripData.createdAt = serverTimestamp();
 tripData.ticketId = Math.random().toString(36).substring(2, 9).toUpperCase();
 
+console.log("Añadiendo nuevo ticket:", tripData); // Log antes de añadir
 await addDoc(collection(db, collectionPath), tripData);
+console.log("Ticket añadido con éxito."); // Log después de añadir
 showStatus(`Ticket #${tripData.ticketId} para ${tripData.clientName} registrado.`, 'success');
 await showClientTicketModal(tripData); // Mostrar modal al crear
 }
