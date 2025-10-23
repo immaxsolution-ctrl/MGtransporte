@@ -126,7 +126,7 @@ margin-right: 0.5rem;
 stroke: #5B48B3;
 }
 
-/* Estilo para el resumen de Gemini (ELIMINADO) */
+/* Estilo para el resumen de Gemini (REMOVIDO) */
 
 
 /* CORREGIDO: Ocultar elementos en la impresión */
@@ -240,7 +240,7 @@ Cerrar Sesión
 <i data-lucide="ticket" class="w-4 h-4 inline-block mr-1"></i> Tickets de Viaje
 </button>
 <button id="tab-rutas" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
-<i data-lucide="list-checks" class="w-4 h-4 inline-block mr-1"></i> Rutas (Asignación)
+<i data-lucide="list-checks" class="w-4 h-4 inline-block mr-1"></i> Planificación de Rutas
 </button>
 <button id="tab-clientes" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
 <i data-lucide="contact" class="w-4 h-4 inline-block mr-1"></i> Clientes
@@ -366,13 +366,23 @@ Cancelar Edición
 </div>
 </div>
 
-<!-- 2. Contenido de RUTAS (Asignación) -->
-<!-- REDISEÑADO: Layout de 3 columnas -->
+<!-- 2. Contenido de RUTAS (Planificación) -->
 <div id="content-rutas" class="tab-content hidden">
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-<!-- Columna 1: Crear / Seleccionar Ruta -->
-<div class="lg:col-span-1 space-y-6">
-<!-- Formulario Crear/Editar Ruta -->
+<!-- Sub-pestañas de Rutas -->
+<div class="flex border-b border-gray-200 mb-4">
+<button id="sub-tab-rutas-crear" class="sub-tab-button active btn-feedback">
+<i data-lucide="plus-square" class="w-4 h-4 inline-block mr-1"></i> Rutas Creadas
+</button>
+<button id="sub-tab-rutas-asignar" class="sub-tab-button btn-feedback">
+<i data-lucide="arrow-left-right" class="w-4 h-4 inline-block mr-1"></i> Asignación de Viajes
+</button>
+</div>
+
+<!-- Contenido Pestaña 1: Crear Rutas y Ver Listas -->
+<div id="content-rutas-crear" class="sub-tab-content">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Columna 1: Crear/Editar Ruta -->
+<div>
 <div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
 <h2 class="text-xl font-semibold mb-4 text-gray-700" id="route-form-title">Crear Nueva Ruta</h2>
 <form id="route-form">
@@ -397,7 +407,7 @@ Cancelar Edición
 </div>
 <div class="mt-6 space-y-3">
 <button type="submit" id="save-route-btn" class="w-full bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center btn-feedback">
-<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Crear Ruta Vacía
+<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Guardar Ruta
 </button>
 <button type="button" id="cancel-route-edit-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 rounded-xl transition duration-150 flex items-center justify-center btn-feedback hidden">
 Cancelar Edición
@@ -405,10 +415,11 @@ Cancelar Edición
 </div>
 </form>
 </div>
-
-<!-- Listado de Rutas (con Sub-Pestañas) -->
+</div>
+<!-- Columna 2: Listas de Rutas Activas/Finalizadas -->
+<div>
 <div class="bg-white p-6 rounded-xl shadow-lg">
-<!-- Sub-pestañas -->
+<!-- Sub-pestañas (anidadas) -->
 <div class="flex border-b border-gray-200 mb-4">
 <button id="sub-tab-rutas-activas" class="sub-tab-button active btn-feedback">
 <i data-lucide="activity" class="w-4 h-4 inline-block mr-1"></i> Activas
@@ -431,41 +442,45 @@ Cancelar Edición
 </div>
 </div>
 </div>
-
-<!-- Columna 2: Ruta Seleccionada y Tramos -->
-<div class="lg:col-span-1">
-<div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
-<h2 class="text-xl font-semibold mb-4 text-gray-700 flex justify-between items-center">
-Ruta Seleccionada <span id="route-id-display" class="text-sm text-gray-500 font-mono"></span>
-</h2>
-<div id="route-details-info" class="p-4 bg-gray-50 rounded-lg">
-<p class="text-center text-gray-500">Selecciona una ruta activa de la lista.</p>
-</div>
-<h3 class="font-semibold text-gray-700 mt-6 mb-3 flex items-center">
-<i data-lucide="list-ordered" class="w-4 h-4 mr-2 color-primary"></i> Tramos Asignados
-</h3>
-<div id="assigned-trips-list" class="space-y-3 max-h-96 overflow-y-auto">
-<p class="text-center text-gray-500 text-sm">Selecciona una ruta para ver sus tramos.</p>
-</div>
 </div>
 </div>
 
-<!-- Columna 3: Tickets Pendientes -->
+<!-- Contenido Pestaña 2: Asignación de Viajes (Nuevo Layout) -->
+<div id="content-rutas-asignar" class="sub-tab-content hidden">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Columna Izquierda: Tickets Pendientes -->
 <div class="lg:col-span-1">
 <div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
 <h3 class="font-semibold text-gray-700 mb-4 flex items-center">
 <i data-lucide="package-open" class="w-4 h-4 mr-2 color-accent"></i> Tickets Pendientes
 </h3>
 <p id="pending-trips-guide" class="text-xs text-center text-gray-500 mb-3 p-2 bg-yellow-50 rounded-md">
-↓ 1. Selecciona una Ruta Activa de la izquierda para ver tickets.
+↓ 1. Haz clic en una ruta de la derecha para seleccionarla.
 </p>
 <div id="pending-trips-list" class="space-y-3 max-h-[60vh] overflow-y-auto">
 <p class="text-center text-gray-500 text-sm" id="loading-pending-trips">Cargando tickets pendientes...</p>
+<!-- Los tickets pendientes se renderizarán aquí -->
+</div>
+</div>
+</div>
+<!-- Columna Derecha: Ruta Seleccionada -->
+<div class="lg:col-span-1">
+<div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
+<h2 class="text-xl font-semibold mb-4 text-gray-700 flex justify-between items-center">
+Ruta Seleccionada
+</h2>
+<p id="route-planner-guide" class="text-center text-gray-500 p-4 border border-dashed rounded-lg">
+↑ 2. Haz clic en el botón '+' de un ticket pendiente para asignarlo a esta ruta.
+</p>
+<div id="current-route-planner-container" class="hidden">
+<!-- Los detalles de la ruta seleccionada y sus tramos aparecerán aquí -->
 </div>
 </div>
 </div>
 </div>
 </div>
+</div>
+
 
 <!-- 3. Contenido de CLIENTES -->
 <div id="content-clientes" class="tab-content hidden">
@@ -658,8 +673,9 @@ function formatPrice(number) {
     return `$ ${Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
 
-// --- LÓGICA DE PESTAÑAS (igual que antes) ---
+// --- LÓGICA DE PESTAÑAS (PRINCIPALES Y SUB-PESTAÑAS) ---
 function setupTabs() {
+    // Pestañas Principales
     const tabs = {
         'tab-viajes': 'content-viajes',
         'tab-rutas': 'content-rutas',
@@ -669,27 +685,25 @@ function setupTabs() {
     };
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', (e) => {
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-
-        button.classList.add('active');
-        const contentId = tabs[button.id];
-        if (contentId) {
-            const contentEl = document.getElementById(contentId);
-            if (contentEl) {
-            contentEl.classList.remove('hidden');
-            } else {
-            console.error(`Contenido no encontrado para ${button.id}: ${contentId}`);
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            
+            button.classList.add('active');
+            const contentId = tabs[button.id];
+            if (contentId) {
+                const contentEl = document.getElementById(contentId);
+                if (contentEl) {
+                    contentEl.classList.remove('hidden');
+                }
             }
-        } else {
-            console.error(`ID de contenido no definido para ${button.id}`);
-        }
-
-        if (button.id === 'tab-rutas') {
-            renderPendingTripsList();
-            updateRouteDetails(currentRouteData);
-        }
-        lucide.createIcons();
+            // Si hacemos clic en la pestaña principal de Rutas, por defecto mostramos la sub-pestaña 'Crear'
+            if (button.id === 'tab-rutas') {
+                document.getElementById('content-rutas-crear').classList.remove('hidden');
+                document.getElementById('sub-tab-rutas-crear').classList.add('active');
+                document.getElementById('content-rutas-asignar').classList.add('hidden');
+                document.getElementById('sub-tab-rutas-asignar').classList.remove('active');
+            }
+            lucide.createIcons();
         });
     });
     // Activar primera pestaña por defecto (solo si ya está logueado)
@@ -697,7 +711,6 @@ function setupTabs() {
         document.getElementById('content-viajes')?.classList.remove('hidden');
         document.getElementById('tab-viajes')?.classList.add('active');
     }
-
 
     // Sub-Pestañas (Viajes)
     document.getElementById('sub-tab-activos')?.addEventListener('click', () => {
@@ -713,7 +726,24 @@ function setupTabs() {
         document.getElementById('sub-tab-finalizados').classList.add('active');
     });
 
-    // Sub-Pestañas (Rutas)
+    // Sub-Pestañas (Rutas) - Pestaña Principal de Planificación
+    document.getElementById('sub-tab-rutas-crear')?.addEventListener('click', () => {
+        document.getElementById('content-rutas-crear').classList.remove('hidden');
+        document.getElementById('content-rutas-asignar').classList.add('hidden');
+        document.getElementById('sub-tab-rutas-crear').classList.add('active');
+        document.getElementById('sub-tab-rutas-asignar').classList.remove('active');
+    });
+    document.getElementById('sub-tab-rutas-asignar')?.addEventListener('click', () => {
+        document.getElementById('content-rutas-crear').classList.add('hidden');
+        document.getElementById('content-rutas-asignar').classList.remove('hidden');
+        document.getElementById('sub-tab-rutas-crear').classList.remove('active');
+        document.getElementById('sub-tab-rutas-asignar').classList.add('active');
+        // Al entrar a asignar, renderizar las listas
+        renderPendingTripsList();
+        renderActiveRoutesForPlanner(); // Renderizar la lista de rutas en la columna de asignación
+    });
+
+    // Sub-Pestañas (Anidadas en Rutas Creadas)
     document.getElementById('sub-tab-rutas-activas')?.addEventListener('click', () => {
         document.getElementById('content-rutas-activas').classList.remove('hidden');
         document.getElementById('content-rutas-finalizadas').classList.add('hidden');
@@ -1423,14 +1453,14 @@ function setupTripCardButtons() {
 async function handleGenerateClientTicket(e) {
     const button = e.currentTarget;
     const originalHtml = button.innerHTML;
-    button.innerHTML = 'Generando...';
+    button.innerHTML = 'Cargando...'; // Texto simple, sin spinner
     button.disabled = true;
     try {
         const tripData = JSON.parse(button.getAttribute('data-trip'));
         await showClientTicketModal(tripData);
     } catch (error) {
         console.error("Error al generar ticket:", error);
-        showStatus("Error al generar resumen.", "error"); // Eliminada referencia a IA
+        showStatus("Error al generar ticket.", "error"); 
     } finally {
         button.innerHTML = originalHtml;
         button.disabled = false;
@@ -1485,15 +1515,17 @@ function listenForRoutes() {
     const q = collection(db, collectionPath);
     return onSnapshot(q, (snapshot) => { // Devuelve la función de desuscripción
         allRoutesData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }));
-        renderRouteLists(allRoutesData);
+        renderRouteLists(allRoutesData); // Renderizar lista en "Rutas Creadas"
+        
+        // Actualizar el panel de detalles si la ruta actual cambió
         if (currentRouteData) {
             const updatedRoute = allRoutesData.find(r => r.id === currentRouteData.id);
             if (updatedRoute) {
                 currentRouteData = updatedRoute;
-                updateRouteDetails(updatedRoute);
+                updateRoutePlannerDetails(updatedRoute); // Actualizar el planificador
             } else {
                 currentRouteData = null;
-                updateRouteDetails(null);
+                updateRoutePlannerDetails(null); // Limpiar el planificador
             }
         }
     }, (error) => {
@@ -1543,13 +1575,16 @@ function handleCancelRouteEdit() {
     currentlyEditingRouteId = null;
     document.getElementById('route-form').reset();
     document.getElementById('route-form-title').textContent = 'Crear Nueva Ruta';
-    document.getElementById('save-route-btn').innerHTML = '<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Crear Ruta Vacía';
+    document.getElementById('save-route-btn').innerHTML = '<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Guardar Ruta';
     document.getElementById('cancel-route-edit-btn').classList.add('hidden');
     lucide.createIcons();
 }
 function handleStartEditRoute(e) {
     e.stopPropagation(); // Evitar que se seleccione la tarjeta
     const routeData = JSON.parse(e.currentTarget.getAttribute('data-route'));
+    
+    // Cambiar a la pestaña "Rutas Creadas" y scrollear arriba
+    document.getElementById('sub-tab-rutas-crear').click();
     window.scrollTo(0, 0);
 
     currentlyEditingRouteId = routeData.id;
@@ -1587,7 +1622,7 @@ async function handleFinalizeRouteFromCard(e) {
 
             if (currentRouteData && currentRouteData.id === routeId) {
                 currentRouteData = null;
-                updateRouteDetails(null);
+                updateRoutePlannerDetails(null); // Limpiar planificador
             }
             showStatus(`Ruta #${routeId.slice(-4)} finalizada con éxito.`, 'success');
         } catch (error) { console.error("Error al finalizar ruta:", error); showStatus('Error al finalizar ruta: ' + error.message, 'error'); }
@@ -1618,20 +1653,21 @@ async function handleDeleteRoute(e) {
 
             if (currentRouteData && currentRouteData.id === routeId) {
                 currentRouteData = null;
-                updateRouteDetails(null);
+                updateRoutePlannerDetails(null); // Limpiar planificador
             }
             showStatus(`Ruta #${routeId.slice(-4)} eliminada.`, 'success');
         } catch (error) { console.error("Error al eliminar ruta:", error); showStatus('Error al eliminar ruta: ' + error.message, 'error'); }
     }
 }
+// Renderiza la lista de rutas en la pestaña "Rutas Creadas"
 function renderRouteLists(routes) {
     const activeListEl = document.getElementById('active-routes-list');
     const finishedListEl = document.getElementById('finished-routes-list');
     if (!activeListEl || !finishedListEl) return;
     activeListEl.innerHTML = ''; finishedListEl.innerHTML = '';
 
-    const activeRoutes = routes.filter(r => r.status === 'Activa').sort((a,b) => a.date.localeCompare(b.date)); // Ordenar por fecha
-    const finishedRoutes = routes.filter(r => r.status === 'Finalizada').sort((a,b) => b.date.localeCompare(a.date)); // Ordenar por fecha (más nuevas primero)
+    const activeRoutes = routes.filter(r => r.status === 'Activa').sort((a,b) => a.date.localeCompare(b.date));
+    const finishedRoutes = routes.filter(r => r.status === 'Finalizada').sort((a,b) => b.date.localeCompare(a.date));
 
     // Activas
     if (document.getElementById('loading-routes-active')) document.getElementById('loading-routes-active').remove();
@@ -1641,16 +1677,19 @@ function renderRouteLists(routes) {
         activeRoutes.forEach(route => {
             const tripCount = route.trips?.length || 0;
             const total = formatPrice(route.totalPrice);
-            const isSelected = currentRouteData && currentRouteData.id === route.id ? 'route-selected' : '';
             activeListEl.innerHTML += `
-            <div class="p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card ${isSelected} cursor-pointer" data-id="${route.id}">
+            <div class="p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card">
                 <div class="flex justify-between items-center mb-2">
                 <p class="font-semibold text-gray-800">Ruta #${route.id.slice(-4)} (${route.date})</p>
                 <span class="text-xs font-medium text-primary">${total}</span>
                 </div>
                 <p class="text-sm text-gray-600">Chofer: ${route.driverName}</p>
                 <p class="text-xs text-gray-500">${tripCount} Tramo(s)</p>
-                <div class="flex items-center justify-end mt-3 pt-2 border-t gap-2">
+                <div class="flex items-center justify-between mt-3 pt-2 border-t">
+                <button data-id="${route.id}" class="plan-route-btn text-primary hover:underline text-sm font-medium btn-feedback">
+                    Planificar esta Ruta →
+                </button>
+                <div class="flex gap-2">
                     <button data-route='${JSON.stringify(route)}' class="edit-route-btn text-blue-600 hover:text-blue-800 p-1 rounded-lg bg-blue-100 btn-feedback" title="Editar Ruta">
                     <i data-lucide="edit-2" class="w-4 h-4"></i>
                     </button>
@@ -1660,6 +1699,7 @@ function renderRouteLists(routes) {
                     <button data-id="${route.id}" class="delete-route-btn text-red-500 hover:text-red-700 p-1 rounded-lg bg-red-100 btn-feedback" title="Eliminar Ruta">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
+                </div>
                 </div>
             </div>
             `;
@@ -1694,9 +1734,9 @@ function renderRouteLists(routes) {
 
     lucide.createIcons();
     // Re-bind all card buttons
-    document.querySelectorAll('#active-routes-list .route-status-card').forEach(card => {
-        card.removeEventListener('click', handleSelectRoute); // Remover listener previo
-        card.addEventListener('click', handleSelectRoute);
+    document.querySelectorAll('.plan-route-btn').forEach(btn => {
+        btn.removeEventListener('click', handlePlanRouteClick); // Remover listener previo
+        btn.addEventListener('click', handlePlanRouteClick);
     });
     document.querySelectorAll('.edit-route-btn').forEach(btn => {
         btn.removeEventListener('click', handleStartEditRoute); // Remover listener previo
@@ -1711,51 +1751,58 @@ function renderRouteLists(routes) {
         btn.addEventListener('click', handleDeleteRoute);
     });
 }
-// Función separada para manejar el clic en la TARJETA de ruta
-function handleSelectRoute(e) {
-    // Evitar que el clic en los botones (editar, borrar) también seleccione la ruta
-    if (e.target.closest('button.btn-feedback')) return; 
-
-    const card = e.currentTarget;
-    const routeId = card.getAttribute('data-id');
+// NUEVA FUNCIÓN: Al hacer clic en "Planificar Ruta"
+function handlePlanRouteClick(e) {
+    e.stopPropagation();
+    const routeId = e.currentTarget.getAttribute('data-id');
     currentRouteData = allRoutesData.find(r => r.id === routeId);
-    updateRouteDetails(currentRouteData); // Actualiza el panel de detalles
-    // Highlight selection
-    document.querySelectorAll('#active-routes-list .route-status-card').forEach(card => card.classList.remove('route-selected'));
-    card.classList.add('route-selected');
-    renderPendingTripsList(); // Actualizar pendientes para habilitar/deshabilitar botones
+    
+    // Cambiar a la pestaña "Asignación de Viajes"
+    document.getElementById('sub-tab-rutas-asignar').click();
+    
+    // Actualizar el contenido del planificador
+    updateRoutePlannerDetails(currentRouteData);
+    // Re-renderizar la lista de pendientes (para resaltar fechas)
+    renderPendingTripsList();
 }
-function updateRouteDetails(route) {
-    const detailsInfoEl = document.getElementById('route-details-info');
-    const assignedTripsEl = document.getElementById('assigned-trips-list');
-    const routeIdDisplay = document.getElementById('route-id-display');
 
-    if (!route || !detailsInfoEl) {
-        if (detailsInfoEl) detailsInfoEl.innerHTML = '<p class="text-center text-gray-500">Selecciona una ruta activa de la lista.</p>';
-        if (assignedTripsEl) assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm">Selecciona una ruta para ver sus tramos.</p>';
-        if (routeIdDisplay) routeIdDisplay.textContent = '';
-        currentRouteData = null; // Limpiar selección
-        renderPendingTripsList(); // Actualizar pendientes (se deshabilitarán los botones)
+// NUEVA FUNCIÓN: Actualiza el panel DERECHO de la pestaña "Asignación"
+function updateRoutePlannerDetails(route) {
+    const plannerContainer = document.getElementById('current-route-planner-container');
+    const plannerGuide = document.getElementById('route-planner-guide');
+    
+    if (!route) {
+        plannerGuide.classList.remove('hidden');
+        plannerContainer.classList.add('hidden');
+        currentRouteData = null;
+        renderPendingTripsList(); // Actualizar pendientes
         return;
     }
-
-    detailsInfoEl.innerHTML = `
-    <p id="route-driver-details" class="font-medium text-gray-700"><i data-lucide="user-check" class="w-4 h-4 inline-block mr-1 text-primary"></i> Chofer: ${route.driverName} (Tel: ${route.driverPhone})</p>
-    <p id="route-vehicle-details" class="text-sm text-gray-600"><i data-lucide="car-front" class="w-4 h-4 inline-block mr-1 text-accent"></i> Vehículo: ${route.vehicleModel} (${route.vehiclePlate})</p>
-    <p id="route-date-details" class="text-sm text-gray-500"><i data-lucide="calendar" class="w-4 h-4 inline-block mr-1 text-gray-500"></i> Fecha: ${route.date}</p>
-    <p id="route-total-price" class="font-bold text-lg text-green-600 mt-2">Total Bruto de Ruta: ${formatPrice(route.totalPrice)}</p>
-    <div id="route-ticket-buttons" class="mt-4 flex space-x-3">
-        <button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150 btn-feedback" ${route.trips?.length === 0 ? 'disabled' : ''}>
-        <i data-lucide="eye" class="w-4 h-4 mr-2"></i> Ver Ticket Chofer
-        </button>
-        <button id="finalize-route-btn-details" data-id="${route.id}" class="bg-red-500 text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center btn-feedback">
-        <i data-lucide="check-circle-2" class="w-4 h-4 mr-2"></i> Finalizar Ruta
-        </button>
-    </div>
+    
+    plannerGuide.classList.add('hidden');
+    plannerContainer.classList.remove('hidden');
+    
+    plannerContainer.innerHTML = `
+        <div class="p-4 bg-yellow-50 border border-yellow-300 rounded-lg mb-4">
+            <p class="font-semibold text-gray-800">Ruta #${route.id.slice(-4)} (${route.date})</p>
+            <p class="text-sm text-gray-600"><i data-lucide="user-check" class="w-4 h-4 inline-block mr-1 text-primary"></i> ${route.driverName}</p>
+            <p class="text-sm text-gray-600"><i data-lucide="car-front" class="w-4 h-4 inline-block mr-1 text-accent"></i> ${route.vehicleModel} (${route.vehiclePlate})</p>
+            <p class="font-bold text-lg text-green-600 mt-2">Total Bruto: ${formatPrice(route.totalPrice)}</p>
+            <div class="mt-4 flex space-x-3">
+                <button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150 btn-feedback" ${route.trips?.length === 0 ? 'disabled' : ''}>
+                <i data-lucide="eye" class="w-4 h-4 mr-2"></i> Ver Ticket Chofer
+                </button>
+            </div>
+        </div>
+        <h3 class="font-semibold text-gray-700 mt-6 mb-3 flex items-center">
+            <i data-lucide="list-ordered" class="w-4 h-4 mr-2 color-primary"></i> Tramos Asignados
+        </h3>
+        <div id="assigned-trips-list-planner" class="space-y-3 max-h-96 overflow-y-auto">
+            <!-- Tramos asignados se renderizarán aquí -->
+        </div>
     `;
-    if (routeIdDisplay) routeIdDisplay.textContent = `#${route.id.slice(-4)}`;
 
-    assignedTripsEl.innerHTML = '';
+    const assignedTripsEl = document.getElementById('assigned-trips-list-planner');
     if (!route.trips || route.trips.length === 0) {
         assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-4 border border-dashed rounded-lg">Aún no hay tickets asignados a esta ruta.</p>';
     } else {
@@ -1780,17 +1827,15 @@ function updateRouteDetails(route) {
         });
     }
 
-    renderPendingTripsList();
     lucide.createIcons();
-    detailsInfoEl.querySelector('#view-route-ticket-btn')?.removeEventListener('click', handleViewRouteTicket); // Remover listener previo
-    detailsInfoEl.querySelector('#view-route-ticket-btn')?.addEventListener('click', handleViewRouteTicket);
-    detailsInfoEl.querySelector('#finalize-route-btn-details')?.removeEventListener('click', handleFinalizeRouteFromDetails); // Remover listener previo
-    detailsInfoEl.querySelector('#finalize-route-btn-details')?.addEventListener('click', handleFinalizeRouteFromDetails);
+    plannerContainer.querySelector('#view-route-ticket-btn')?.removeEventListener('click', handleViewRouteTicket); // Remover listener previo
+    plannerContainer.querySelector('#view-route-ticket-btn')?.addEventListener('click', handleViewRouteTicket);
     assignedTripsEl.querySelectorAll('.remove-trip-from-route-btn').forEach(btn => {
         btn.removeEventListener('click', handleRemoveTripFromRoute); // Remover listener previo
         btn.addEventListener('click', handleRemoveTripFromRoute);
     });
 }
+// Renderiza la lista de pendientes en la pestaña "Asignación"
 function renderPendingTripsList() {
     const listEl = document.getElementById('pending-trips-list');
     const guideEl = document.getElementById('pending-trips-guide');
@@ -1808,7 +1853,7 @@ function renderPendingTripsList() {
     
     // Actualizar guía
     if (!currentRouteData) {
-        guideEl.textContent = '↓ 1. Selecciona una Ruta Activa de la izquierda para empezar a asignar.';
+        guideEl.textContent = '↓ 1. Haz clic en una ruta (en la pestaña "Rutas Creadas") para planificarla.';
     } else {
         guideEl.textContent = `↓ 2. Añade tickets para la ruta del ${currentRouteData.date}.`;
     }
@@ -1937,7 +1982,7 @@ async function handleFinalizeRouteFromDetails(e) {
             await batch.commit();
             if (currentRouteData && currentRouteData.id === routeId) {
                 currentRouteData = null;
-                updateRouteDetails(null);
+                updateRoutePlannerDetails(null); // Limpiar planificador
             }
             showStatus(`Ruta #${routeId.slice(-4)} finalizada con éxito.`, 'success');
         } catch (error) { console.error("Error al finalizar ruta:", error); showStatus('Error al finalizar ruta: ' + error.message, 'error'); }
