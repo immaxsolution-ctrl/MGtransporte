@@ -126,41 +126,7 @@ margin-right: 0.5rem;
 stroke: #5B48B3;
 }
 
-/* Estilo para el resumen de Gemini */
-.gemini-summary {
-background-color: #fdfdea; /* Amarillo pálido */
-border: 1px solid #fbf0c0;
-border-radius: 0.5rem;
-padding: 1rem;
-margin-top: 1rem;
-margin-bottom: 1rem;
-font-size: 0.9rem;
-color: #725a03;
-}
-.gemini-summary p {
-margin-bottom: 0.5rem;
-color: #725a03;
-}
-.gemini-summary strong {
-color: #5a4802;
-}
-.gemini-summary ul {
-list-style-type: disc;
-padding-left: 1.25rem;
-}
-.gemini-summary-title {
-font-weight: 700;
-display: flex;
-align-items: center;
-color: #5a4802;
-margin-bottom: 0.5rem;
-}
-.gemini-summary-title svg {
-width: 1rem;
-height: 1rem;
-margin-right: 0.5rem;
-stroke: #725a03;
-}
+/* Estilo para el resumen de Gemini (ELIMINADO) */
 
 
 /* CORREGIDO: Ocultar elementos en la impresión */
@@ -201,12 +167,6 @@ stroke: #725a03;
     border: 1px solid #ccc !important;
     box-shadow: none !important;
     page-break-inside: avoid; /* Evitar que se corte el ticket */
-  }
-  
-  .gemini-summary {
-    background-color: #ffffff !important;
-    border: 1px solid #eee !important;
-    page-break-inside: avoid;
   }
 
   /* Ocultar explícitamente otros elementos de la UI */
@@ -933,10 +893,6 @@ function stopDataListeners() {
     detachListeners = []; // Limpiar el array
     console.log("Listeners detenidos.");
 }
-
-
-// --- SECCIÓN DE GEMINI API (REMOVIDA) ---
-// Se eliminaron las funciones: fetchWithBackoff, callGemini, getGeminiDriverSummary
 
 
 // --- LÓGICAS DE DATOS (Vehículos, Choferes, Clientes, Viajes, Rutas) ---
@@ -2002,6 +1958,7 @@ function generateRouteTicket(route) {
         routeDetailsHtml += `<div class="border-t border-gray-200 pt-3 mt-3"><p class="section-title">TRAMO ${index + 1} (Boleto #${trip.ticketId})</p><p><strong>Cliente:</strong> ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})</p><p><strong>Info:</strong> ${petInfoText}</p><p><strong>Recogida (Aprox):</strong> ${trip.time || 'Sin hora'}</p><p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p><p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p><p class="highlight">Precio Cliente: ${formatPrice(trip.price)}</p></div>`;
     });
     const text = `*MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})\n*DATOS DEL CHOFER Y VEHÍCULO*\n- *Chofer:* ${route.driverName} (DNI: ${route.driverDni})\n- *Teléfono Chofer:* ${route.driverPhone}\n- *Vehículo:* ${route.vehicleModel} ${route.vehicleColor}\n- *Patente:* ${route.vehiclePlate}\n------------------------------------\n*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*${routeDetailsText}\n*TOTAL BRUTO DE RUTA:* ${formatPrice(route.totalPrice)}\n¡Buena ruta!`.trim();
+    // REMOVIDO: ${geminiSummary.html}
     const html = `<div class="printable-ticket"><h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4><p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p><p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p><p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p><p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p><div class="mt-4"><p class="section-title">Tramos Asignados</p>${routeDetailsHtml}</div><div class="border-t border-gray-300 pt-3 mt-4"><p class="text-lg font-bold">TOTAL BRUTO RUTA: ${formatPrice(route.totalPrice)}</p></div></div>`.trim();
     return { html, text };
 }
