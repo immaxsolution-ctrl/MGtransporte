@@ -497,7 +497,7 @@ Ruta Seleccionada <span id="route-id-display" class="text-sm text-gray-500 font-
 <i data-lucide="package-open" class="w-4 h-4 mr-2 color-accent"></i> Tickets Pendientes
 </h3>
 <p id="pending-trips-guide" class="text-xs text-center text-gray-500 mb-3 p-2 bg-yellow-50 rounded-md">
-↓ 1. Selecciona una Ruta Activa de la izquierda para ver tickets de esa fecha.
+↓ 1. Selecciona una Ruta Activa de la izquierda para ver tickets.
 </p>
 <div id="pending-trips-list" class="space-y-3 max-h-[60vh] overflow-y-auto">
 <p class="text-center text-gray-500 text-sm" id="loading-pending-trips">Cargando tickets pendientes...</p>
@@ -935,118 +935,9 @@ function stopDataListeners() {
 }
 
 
-// --- SECCIÓN DE GEMINI API (sin cambios) ---
-async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
-    try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-        if (response.status === 429 && retries > 0) { // Too Many Requests
-            console.warn(`Throttled by API. Retrying in ${delay / 1000}s... (${retries} retries left)`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            return fetchWithBackoff(url, options, retries - 1, delay * 2); // Exponential backoff
-        }
-        const errorBody = await response.text();
-        console.error(`HTTP error! status: ${response.status}`, errorBody);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`);
-        }
-        return response.json();
-    } catch (error) {
-        console.error(`Fetch error: ${error.message}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
-        if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchWithBackoff(url, options, retries - 1, delay * 2);
-        }
-        console.error("Fetch failed after multiple retries:", error);
-        throw error;
-    }
-}
+// --- SECCIÓN DE GEMINI API (REMOVIDA) ---
+// Se eliminaron las funciones: fetchWithBackoff, callGemini, getGeminiDriverSummary
 
-async function callGemini(userPrompt, systemPrompt = "") {
-    const apiKey = "";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-    const payload = { contents: [{ parts: [{ text: userPrompt }] }] };
-    if (systemPrompt) payload.systemInstruction = { parts: [{ text: systemPrompt }] };
-
-    try {
-        console.log("Calling Gemini API...");
-        const result = await fetchWithBackoff(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-        });
-        console.log("Gemini API response received:", result);
-        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-
-        console.warn("Respuesta de Gemini vacía o inesperada:", result);
-        const feedback = result?.promptFeedback;
-        const blockReason = feedback?.blockReason;
-        const safetyRatings = feedback?.safetyRatings?.map(r => `${r.category}: ${r.probability}`).join(', ');
-        let errorDetails = 'Respuesta inesperada';
-        if (blockReason) {
-            errorDetails = `Bloqueado por: ${blockReason}. ${safetyRatings || ''}`.trim();
-        } else if (result?.error?.message) {
-            errorDetails = result.error.message;
-        }
-        return `No se pudo generar el resumen (${errorDetails}).`;
-    } catch (error) {
-        console.error("Error llamando a la API de Gemini:", error);
-        return `Error al contactar la IA: ${error.message}`;
-    }
-}
-
-async function getGeminiDriverSummary(route, routeTrips) {
-    const systemPrompt = "Sos un asistente de logística para 'MG Transporte' en Argentina. Tu tono es amigable, profesional y usás 'vos' en lugar de 'tú'. Generá un resumen corto y útil para el chofer. NO uses markdown, solo texto plano y viñetas con '*' o '-'.";
-    const simplifiedTrips = routeTrips.map((trip, index) => ({
-        parada: index + 1,
-        cliente: trip.clientName,
-        hora: trip.time,
-        origen: `${trip.addressOrigin}, ${trip.localityOrigin}`,
-        destino: `${trip.addressDest}, ${trip.localityDest}`,
-        pasajeros: trip.pasajeros || 1,
-        mascotas: trip.mascotas || 0,
-        tamano_mascota: trip.petSize || 'ninguno'
-    }));
-    const userPrompt = `
-    Generá un resumen para el chofer ${route.driverName} para su ruta del ${route.date}.
-    Datos de la Ruta:
-    - Total de paradas: ${routeTrips.length}
-    - Ganancia Bruta Total: ${formatPrice(route.totalPrice)}
-    - Vehículo: ${route.vehicleModel} (${route.vehiclePlate})
-    Listado de Viajes (Tramos):
-    ${JSON.stringify(simplifiedTrips, null, 2)}
-    Tu tarea es escribir un resumen amigable en 3-4 viñetas. Enfocate SÓLO en lo más importante.
-    Cosas a destacar (si existen):
-    - ¿Hay mascotas? ¿De qué tamaño? (¡Muy importante!)
-    - ¿Hay paradas que estén muy cerca en la misma localidad?
-    - ¿Hay algún viaje con muchos pasajeros?
-    Empezá con "¡Hola ${route.driverName}! Acá tenés un resumen rápido de tu ruta:"
-    `;
-    let summaryText = await callGemini(userPrompt, systemPrompt);
-
-    // Sanitize summary text before inserting as HTML
-    const sanitizedSummary = summaryText
-        .replace(/</g, "&lt;") // Escape HTML tags
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, '<br>') // Convert newlines to <br>
-        .replace(/\* /g, '&#8226; ') // Convert markdown list items
-        .replace(/- /g, '&#8226; ');
-
-    const summaryHtml = `
-    <div class="gemini-summary">
-    <p class="gemini-summary-title">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
-    Resumen del Chofer (IA)
-    </p>
-    <p>${sanitizedSummary}</p> <!-- Use the sanitized content -->
-    </div>
-    `;
-    // For plain text, keep original formatting slightly modified
-    const summaryPlainText = summaryText
-    .replace(/&#8226;/g, '*'); // Use '*' for lists if needed in plain text
-
-    return { html: summaryHtml, text: summaryPlainText };
-}
 
 // --- LÓGICAS DE DATOS (Vehículos, Choferes, Clientes, Viajes, Rutas) ---
 
@@ -1583,7 +1474,7 @@ async function handleGenerateClientTicket(e) {
         await showClientTicketModal(tripData);
     } catch (error) {
         console.error("Error al generar ticket:", error);
-        showStatus("Error al generar resumen de IA.", "error");
+        showStatus("Error al generar resumen.", "error"); // Eliminada referencia a IA
     } finally {
         button.innerHTML = originalHtml;
         button.disabled = false;
@@ -1603,7 +1494,7 @@ async function handleDeleteTrip(e) {
         confirmMsg = `ADVERTENCIA: Este ticket está asignado a una ruta. Si lo borras, se eliminará permanentemente pero NO se desasignará de la ruta (puede causar errores de precio). Se recomienda desasignarlo primero desde la pestaña 'Rutas'.\n\n¿Eliminar de todas formas?`;
     }
 
-    if (confirm(confirmMsg)) {
+    if (confirm(confirmMsg)) { // CORREGIDO: Usar confirm() en lugar de prompt()
         try {
             await deleteDoc(doc(db, collectionPath, tripId));
             showStatus(`Viaje de ${clientName} eliminado.`, 'success');
@@ -1783,8 +1674,8 @@ function renderRouteLists(routes) {
     if (!activeListEl || !finishedListEl) return;
     activeListEl.innerHTML = ''; finishedListEl.innerHTML = '';
 
-    const activeRoutes = routes.filter(r => r.status === 'Activa');
-    const finishedRoutes = routes.filter(r => r.status === 'Finalizada');
+    const activeRoutes = routes.filter(r => r.status === 'Activa').sort((a,b) => a.date.localeCompare(b.date)); // Ordenar por fecha
+    const finishedRoutes = routes.filter(r => r.status === 'Finalizada').sort((a,b) => b.date.localeCompare(a.date)); // Ordenar por fecha (más nuevas primero)
 
     // Activas
     if (document.getElementById('loading-routes-active')) document.getElementById('loading-routes-active').remove();
@@ -1952,40 +1843,49 @@ function renderPendingTripsList() {
     listEl.innerHTML = '';
     const loadingEl = document.getElementById('loading-pending-trips');
     if (loadingEl) loadingEl.style.display = 'none';
-
-    // Si no hay ruta seleccionada, mostrar mensaje guía
-    if (!currentRouteData) {
-        guideEl.textContent = '↓ 1. Selecciona una Ruta Activa de la izquierda para ver tickets.';
-        listEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">Selecciona una ruta para ver tickets pendientes.</p>';
-        return;
-    }
     
-    // Si hay ruta, filtrar tickets por fecha
-    guideEl.textContent = `↓ 2. Añade tickets pendientes para la fecha: ${currentRouteData.date}`;
+    // CORREGIDO: Mostrar TODOS los tickets pendientes, ordenados por fecha
     const availableTrips = allTripsData.filter(t => 
         !t.isAssigned && 
-        t.status === 'Activo' &&
-        t.date === currentRouteData.date // <-- FILTRO POR FECHA
-    );
+        t.status === 'Activo'
+    ).sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
+    
+    // Actualizar guía
+    if (!currentRouteData) {
+        guideEl.textContent = '↓ 1. Selecciona una Ruta Activa de la izquierda para empezar a asignar.';
+    } else {
+        guideEl.textContent = `↓ 2. Añade tickets para la ruta del ${currentRouteData.date}.`;
+    }
 
     if (availableTrips.length === 0) {
-        listEl.innerHTML = `<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay tickets pendientes para el ${currentRouteData.date}.</p>`;
+        listEl.innerHTML = `<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay tickets pendientes.</p>`;
         return;
     }
     
-    availableTrips.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     availableTrips.forEach(trip => {
         let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
         if (trip.petSize && trip.petSize !== 'ninguno') petInfo += ` (${trip.petSize})`;
+        const isCurrentRouteSelected = currentRouteData !== null;
+        
+        // CORREGIDO: Lógica de resaltado
+        let borderColor = 'border-gray-200';
+        let dateMismatch = false;
+        if(currentRouteData && trip.date !== currentRouteData.date) {
+            borderColor = 'border-red-300'; // Fecha no coincide
+            dateMismatch = true;
+        } else if (currentRouteData && trip.date === currentRouteData.date) {
+            borderColor = 'border-green-300'; // Fecha coincide
+        }
         
         listEl.innerHTML += `
-        <div class="p-3 bg-gray-50 border rounded-lg border-gray-200 flex justify-between items-center">
+        <div class="p-3 bg-gray-50 border-2 rounded-lg ${borderColor} flex justify-between items-center">
             <div>
             <p class="font-semibold text-sm text-gray-700">${trip.clientName}</p>
-            <p class="text-xs text-gray-500">${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
+            <p class="text-xs text-gray-500">${trip.date || 'Sin fecha'} - ${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
             <p class="text-xs text-gray-500">${petInfo}</p>
+            ${dateMismatch ? `<p class="text-xs font-bold text-red-600">La fecha no coincide con la ruta</p>` : ''}
             </div>
-            <button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" title="Añadir a ruta seleccionada">
+            <button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" ${isCurrentRouteSelected ? '' : 'disabled'} title="${isCurrentRouteSelected ? 'Añadir a ruta seleccionada' : 'Selecciona una ruta activa primero'}">
             <i data-lucide="plus" class="w-4 h-4 inline-block mr-1"></i> Añadir
             </button>
         </div>
@@ -2005,6 +1905,13 @@ async function handleAssignTripToRoute(e) {
     const collectionPath = ROUTES_COLLECTION();
     const tripCollectionPath = TRIPS_COLLECTION();
     if (!collectionPath || !tripCollectionPath) return;
+
+    // Advertir si la fecha no coincide, pero permitirlo
+    if (trip.date !== currentRouteData.date) {
+        if (!confirm(`ADVERTENCIA: El ticket es del ${trip.date} y la ruta es del ${currentRouteData.date}. ¿Asignar de todas formas?`)) {
+            return; // Cancelar si el usuario no confirma
+        }
+    }
 
     const currentPrice = currentRouteData.totalPrice || 0;
     const newTotalPrice = currentPrice + (trip.price || 0);
@@ -2083,7 +1990,8 @@ async function handleFinalizeRouteFromDetails(e) {
 
 
 // --- LÓGICA DEL MODAL DE TICKET ---
-function generateRouteTicket(route, geminiSummary) {
+// REMOVIDO: Gemini
+function generateRouteTicket(route) {
     const routeTrips = allTripsData.filter(t => route.trips?.includes(t.id));
     routeTrips.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     let routeDetailsText = ''; let routeDetailsHtml = '';
@@ -2093,8 +2001,8 @@ function generateRouteTicket(route, geminiSummary) {
         routeDetailsText += `\n*TRAMO ${index + 1}* (Boleto #${trip.ticketId})\nCliente: ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})\n${petInfoText}\n- Recogida (Hora Aprox.): ${trip.time || 'Sin hora'}\n- Origen: ${trip.addressOrigin}, ${trip.localityOrigin}\n- Destino: ${trip.addressDest}, ${trip.localityDest}\n- Precio Cliente: ${formatPrice(trip.price)}\n------------------------------------\n`;
         routeDetailsHtml += `<div class="border-t border-gray-200 pt-3 mt-3"><p class="section-title">TRAMO ${index + 1} (Boleto #${trip.ticketId})</p><p><strong>Cliente:</strong> ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})</p><p><strong>Info:</strong> ${petInfoText}</p><p><strong>Recogida (Aprox):</strong> ${trip.time || 'Sin hora'}</p><p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p><p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p><p class="highlight">Precio Cliente: ${formatPrice(trip.price)}</p></div>`;
     });
-    const text = `*MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})\n*DATOS DEL CHOFER Y VEHÍCULO*\n- *Chofer:* ${route.driverName} (DNI: ${route.driverDni})\n- *Teléfono Chofer:* ${route.driverPhone}\n- *Vehículo:* ${route.vehicleModel} ${route.vehicleColor}\n- *Patente:* ${route.vehiclePlate}\n\n*✨ RESUMEN DE RUTA (IA) ✨*\n${geminiSummary.text}\n------------------------------------\n*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*${routeDetailsText}\n*TOTAL BRUTO DE RUTA:* ${formatPrice(route.totalPrice)}\n¡Buena ruta!`.trim();
-    const html = `<div class="printable-ticket"><h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4><p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p><p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p><p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p><p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p>${geminiSummary.html}<div class="mt-4"><p class="section-title">Tramos Asignados</p>${routeDetailsHtml}</div><div class="border-t border-gray-300 pt-3 mt-4"><p class="text-lg font-bold">TOTAL BRUTO RUTA: ${formatPrice(route.totalPrice)}</p></div></div>`.trim();
+    const text = `*MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})\n*DATOS DEL CHOFER Y VEHÍCULO*\n- *Chofer:* ${route.driverName} (DNI: ${route.driverDni})\n- *Teléfono Chofer:* ${route.driverPhone}\n- *Vehículo:* ${route.vehicleModel} ${route.vehicleColor}\n- *Patente:* ${route.vehiclePlate}\n------------------------------------\n*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*${routeDetailsText}\n*TOTAL BRUTO DE RUTA:* ${formatPrice(route.totalPrice)}\n¡Buena ruta!`.trim();
+    const html = `<div class="printable-ticket"><h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4><p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p><p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p><p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p><p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p><div class="mt-4"><p class="section-title">Tramos Asignados</p>${routeDetailsHtml}</div><div class="border-t border-gray-300 pt-3 mt-4"><p class="text-lg font-bold">TOTAL BRUTO RUTA: ${formatPrice(route.totalPrice)}</p></div></div>`.trim();
     return { html, text };
 }
 function generateClientTicket(trip, routeData = null) {
@@ -2114,9 +2022,8 @@ async function showClientTicketModal(tripData) {
     const routeData = tripData.assignedRouteId ? allRoutesData.find(r => r.id === tripData.assignedRouteId) : null;
     modalTicketData.client = generateClientTicket(tripData, routeData);
     if (routeData) {
-        const routeTrips = allTripsData.filter(t => routeData.trips?.includes(t.id));
-        const geminiSummary = await getGeminiDriverSummary(routeData, routeTrips);
-        modalTicketData.driver = generateRouteTicket(routeData, geminiSummary);
+        // REMOVIDO: Gemini
+        modalTicketData.driver = generateRouteTicket(routeData); // Sin geminiSummary
     } else {
         modalTicketData.driver = { html: '<p class="p-4 text-center text-gray-600">Pendiente de asignación.</p>', text: 'Pendiente.' };
     }
@@ -2134,12 +2041,12 @@ async function showClientTicketModal(tripData) {
 async function handleViewRouteTicket(e) {
     if (!currentRouteData) { return; }
     const button = e.currentTarget; 
-    const originalHtml = button.innerHTML; button.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Generando...`; button.disabled = true;
+    button.disabled = true; // Deshabilitar
     try {
-        const routeTrips = allTripsData.filter(t => currentRouteData.trips?.includes(t.id));
-        const geminiSummary = await getGeminiDriverSummary(currentRouteData, routeTrips);
-        modalTicketData.driver = generateRouteTicket(currentRouteData, geminiSummary);
+        // REMOVIDO: Gemini
+        modalTicketData.driver = generateRouteTicket(currentRouteData); // Sin geminiSummary
         modalTicketData.client = { html: '<p class="p-4">Use "Tickets" para ticket cliente.</p>', text: 'No disponible.' };
+        
         document.getElementById('modal-content-client').innerHTML = modalTicketData.client.html;
         document.getElementById('modal-content-driver').innerHTML = modalTicketData.driver.html;
         document.getElementById('modal-tab-client').classList.remove('active');
@@ -2150,8 +2057,8 @@ async function handleViewRouteTicket(e) {
         document.getElementById('ticket-modal').dataset.activeTab = 'driver';
         document.getElementById('ticket-modal').classList.remove('hidden');
         lucide.createIcons();
-    } catch (error) { console.error("Error:", error); showStatus("Error IA.", "error"); }
-    finally { button.innerHTML = originalHtml; button.disabled = false; lucide.createIcons(); }
+    } catch (error) { console.error("Error:", error); showStatus("Error al generar ticket.", "error"); }
+    finally { button.disabled = false; lucide.createIcons(); } // Habilitar
 }
 document.getElementById('close-modal-btn').addEventListener('click', () => { document.getElementById('ticket-modal').classList.add('hidden'); });
 document.getElementById('modal-tab-client').addEventListener('click', (e) => { 
