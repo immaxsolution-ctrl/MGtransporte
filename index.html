@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -37,7 +36,7 @@ font-weight: 600;
 border-left: 4px solid #ff8c00;
 }
 
-/* Sub-pestañas para Activos/Finalizados */
+/* Sub-pestañas (Genéricas) */
 .sub-tab-button {
 padding: 8px 16px;
 border-bottom: 3px solid transparent;
@@ -49,6 +48,22 @@ border-bottom-color: #5B48B3;
 color: #5B48B3;
 font-weight: 600;
 }
+
+/* Feedback de Botón */
+.btn-feedback {
+transition: all 0.1s ease;
+}
+.btn-feedback:active {
+transform: scale(0.98);
+opacity: 0.9;
+}
+/* Deshabilitado */
+.btn-feedback:disabled {
+transform: scale(1);
+opacity: 0.7;
+cursor: not-allowed;
+}
+
 
 /* Estilo para el Ticket en el Modal */
 .printable-ticket {
@@ -148,13 +163,48 @@ position: absolute;
 left: 0;
 top: 0;
 width: 100%;
+/* Ajustes para asegurar que se imprima correctamente */
+padding: 0;
+margin: 0;
+border: none;
+box-shadow: none;
+max-height: none !important; /* Importante para que no corte */
+overflow: visible !important;
 }
-.modal-actions-no-print {
+#ticket-modal {
+/* Asegurar que el modal no interfiera */
+position: relative;
+background: none;
+inset: auto;
+}
+#ticket-modal > div { /* Contenedor del modal */
+max-height: none !important; /* Importante */
+overflow: visible !important;
+box-shadow: none;
+border: none;
+padding: 0;
+margin: 0;
+background: none;
+}
+.modal-actions-no-print,
+#close-modal-btn,
+#ticket-modal .flex.border-b { /* Ocultar botones y pestañas del modal */
 display: none;
+}
+.printable-ticket {
+box-shadow: none;
+border: 1px solid #ccc; /* Añadir un borde sutil para impresión */
+width: 100%; /* Asegurar ancho completo */
+margin: 0;
+padding: 10px; /* Ajustar padding si es necesario */
 }
 .gemini-summary {
 background-color: #ffffff;
 border: 1px solid #eeeeee;
+}
+/* Ocultar barras de scroll si las hubiera */
+body {
+overflow: visible !important;
 }
 }
 </style>
@@ -176,24 +226,27 @@ border: 1px solid #eeeeee;
 <div id="auth-status" class="text-center text-xs text-gray-400 mb-4">Conectando a la base de datos...</div>
 
 <!-- Navegación de Pestañas -->
-<div class="flex border-b border-gray-200 mb-6 text-sm">
-<button id="tab-viajes" class="tab-button active flex-1 py-3 px-1 text-center text-gray-600 transition duration-150">
+<div class="flex border-b border-gray-200 mb-6 text-sm overflow-x-auto">
+<button id="tab-viajes" class="tab-button active flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
 <i data-lucide="ticket" class="w-4 h-4 inline-block mr-1"></i> Tickets de Viaje
 </button>
-<button id="tab-rutas" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150">
+<button id="tab-rutas" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
 <i data-lucide="list-checks" class="w-4 h-4 inline-block mr-1"></i> Rutas (Asignación)
 </button>
-<button id="tab-vehiculos" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150">
+<button id="tab-clientes" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
+<i data-lucide="contact" class="w-4 h-4 inline-block mr-1"></i> Clientes
+</button>
+<button id="tab-vehiculos" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
 <i data-lucide="car" class="w-4 h-4 inline-block mr-1"></i> Vehículos
 </button>
-<button id="tab-choferes" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150">
+<button id="tab-choferes" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
 <i data-lucide="users" class="w-4 h-4 inline-block mr-1"></i> Choferes
 </button>
 </div>
 
 <!-- 1. Contenido de VIAJES (Tickets individuales) -->
 <div id="content-viajes" class="tab-content">
-<!-- Formulario de Viaje (Con todos los datos del Excel) -->
+<!-- Formulario de Viaje -->
 <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
 <h2 class="text-xl font-semibold mb-4 text-gray-700">Registrar Nuevo Ticket de Viaje</h2>
 <form id="trip-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -202,29 +255,29 @@ border: 1px solid #eeeeee;
 <div class="md:col-span-2 grid grid-cols-2 gap-4">
 <div>
 <label class="block text-sm font-medium text-gray-700">Cliente / Pasajero</label>
-<input type="text" id="client-name" placeholder="Nombre completo (Columna Cliente)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<input type="text" id="client-name" placeholder="Nombre completo" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 <div>
 <label class="block text-sm font-medium text-gray-700">Teléfono del cliente</label>
-<input type="text" id="client-phone" placeholder="Teléfono (Columna Teléfono)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary">
+<input type="text" id="client-phone" placeholder="Teléfono (clave para guardar cliente)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 </div>
 <!-- Origen (Salida) -->
 <div class="p-3 border rounded-lg bg-red-50 border-red-200">
 <p class="font-bold text-red-700 text-sm mb-2">SALIDA (Origen)</p>
 <label class="block text-xs font-medium text-gray-700">Dirección Salida</label>
-<input type="text" id="address-origin" placeholder="Dirección (Columna Dirección)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<input type="text" id="address-origin" placeholder="Dirección" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 <label class="block text-xs font-medium text-gray-700 mt-2">Localidad Salida</label>
-<input type="text" id="locality-origin" placeholder="Localidad (Columna Localidad)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<input type="text" id="locality-origin" placeholder="Localidad" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 
 <!-- Destino -->
 <div class="p-3 border rounded-lg bg-green-50 border-green-200">
 <p class="font-bold text-green-700 text-sm mb-2">DESTINO</p>
 <label class="block text-xs font-medium text-gray-700">Dirección Destino</label>
-<input type="text" id="address-dest" placeholder="Dirección (Columna Dirección)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<input type="text" id="address-dest" placeholder="Dirección" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 <label class="block text-xs font-medium text-gray-700 mt-2">Localidad Destino</label>
-<input type="text" id="locality-dest" placeholder="Localidad (Columna Localidad)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<input type="text" id="locality-dest" placeholder="Localidad" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 
 <!-- Fecha, Hora y Precio -->
@@ -233,11 +286,11 @@ border: 1px solid #eeeeee;
 <input type="date" id="trip-date" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 <div>
-<label class="block text-sm font-medium text-gray-700">Hora Aprox. (Columna Hora)</label>
+<label class="block text-sm font-medium text-gray-700">Hora Aprox.</label>
 <input type="time" id="trip-time" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 
-<!-- Pasajeros y Mascotas (ACTUALIZADO) -->
+<!-- Pasajeros y Mascotas -->
 <div class="md:col-span-2 grid grid-cols-3 gap-4">
 <div>
 <label class="block text-sm font-medium text-gray-700">Pasajeros</label>
@@ -258,15 +311,15 @@ border: 1px solid #eeeeee;
 </div>
 
 <div class="md:col-span-2">
-<label class="block text-sm font-medium text-gray-700">Precio Final (Columna Precio Viaje)</label>
-<input type="number" id="trip-price" placeholder="Precio final del viaje (solo números)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<label class="block text-sm font-medium text-gray-700">Precio Final</label>
+<input type="number" id="trip-price" placeholder="Precio final del viaje" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 
 <div class="md:col-span-2 mt-4 flex space-x-3">
-<button type="submit" id="save-trip-btn" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 flex items-center justify-center">
+<button type="submit" id="save-trip-btn" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 flex items-center justify-center btn-feedback">
 <i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i> Registrar Ticket
 </button>
-<button type="button" id="cancel-edit-btn" class="w-1/3 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 rounded-xl transition duration-150 hidden">
+<button type="button" id="cancel-edit-btn" class="w-1/3 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 rounded-xl transition duration-150 hidden btn-feedback">
 Cancelar Edición
 </button>
 </div>
@@ -277,10 +330,10 @@ Cancelar Edición
 <div class="bg-white p-6 rounded-xl shadow-lg">
 <!-- Sub-pestañas -->
 <div class="flex border-b border-gray-200 mb-4">
-<button id="sub-tab-activos" class="sub-tab-button active">
+<button id="sub-tab-activos" class="sub-tab-button active btn-feedback">
 <i data-lucide="activity" class="w-4 h-4 inline-block mr-1"></i> Activos
 </button>
-<button id="sub-tab-finalizados" class="sub-tab-button">
+<button id="sub-tab-finalizados" class="sub-tab-button btn-feedback">
 <i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> Finalizados
 </button>
 </div>
@@ -308,9 +361,11 @@ Cancelar Edición
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 <!-- Columna 1: Crear/Ver Rutas -->
 <div class="xl:col-span-1">
-<div class="bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-0">
-<h2 class="text-xl font-semibold mb-4 text-gray-700">Crear Nueva Ruta</h2>
+<!-- Formulario Crear/Editar Ruta (Ajustado para Scroll) -->
+<div class="bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
+<h2 class="text-xl font-semibold mb-4 text-gray-700" id="route-form-title">Crear Nueva Ruta</h2>
 <form id="route-form">
+<input type="hidden" id="editing-route-id">
 <div class="space-y-4">
 <div>
 <label class="block text-sm font-medium text-gray-700">Asignar Chofer</label>
@@ -329,17 +384,43 @@ Cancelar Edición
 <input type="date" id="route-date" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 </div>
-<button type="submit" class="w-full mt-6 bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center">
+<div class="mt-6 space-y-3">
+<button type="submit" id="save-route-btn" class="w-full bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center btn-feedback">
 <i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Crear Ruta Vacía
 </button>
+<button type="button" id="cancel-route-edit-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 rounded-xl transition duration-150 flex items-center justify-center btn-feedback hidden">
+Cancelar Edición
+</button>
+</div>
 </form>
 </div>
 
+<!-- Listado de Rutas (con Sub-Pestañas) -->
 <div class="bg-white p-6 rounded-xl shadow-lg">
+<!-- Sub-pestañas -->
+<div class="flex border-b border-gray-200 mb-4">
+<button id="sub-tab-rutas-activas" class="sub-tab-button active btn-feedback">
+<i data-lucide="activity" class="w-4 h-4 inline-block mr-1"></i> Activas
+</button>
+<button id="sub-tab-rutas-finalizadas" class="sub-tab-button btn-feedback">
+<i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> Finalizadas
+</button>
+</div>
+
+<!-- Contenido Pestaña Rutas Activas -->
+<div id="content-rutas-activas" class="sub-tab-content">
 <h3 class="font-semibold text-gray-700 mb-3">Rutas Activas</h3>
 <div id="active-routes-list" class="space-y-3">
-<p class="text-center text-xs text-gray-400" id="loading-routes">Cargando rutas...</p>
-<!-- Rutas activas se renderizan aquí -->
+<p class="text-center text-xs text-gray-400" id="loading-routes-active">Cargando rutas activas...</p>
+</div>
+</div>
+
+<!-- Contenido Pestaña Rutas Finalizadas -->
+<div id="content-rutas-finalizadas" class="sub-tab-content hidden">
+<h3 class="font-semibold text-gray-700 mb-3">Rutas Finalizadas</h3>
+<div id="finished-routes-list" class="space-y-3">
+<p class="text-center text-xs text-gray-400" id="loading-routes-finished">Cargando rutas finalizadas...</p>
+</div>
 </div>
 </div>
 </div>
@@ -352,18 +433,8 @@ Cancelar Edición
 Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mono"></span>
 </h2>
 <div id="route-details-info" class="p-4 bg-gray-50 rounded-lg">
-<p id="route-driver-details" class="font-medium text-gray-700"></p>
-<p id="route-vehicle-details" class="text-sm text-gray-600"></p>
-<p id="route-date-details" class="text-sm text-gray-500"></p>
-<p id="route-total-price" class="font-bold text-lg text-green-600 mt-2"></p>
-<div id="route-ticket-buttons" class="mt-4 flex space-x-3">
-<button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150" disabled>
-<i data-lucide="printer" class="w-4 h-4 mr-2"></i> Ver Ticket Chofer
-</button>
-<button id="finalize-route-btn" class="bg-red-500 text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center" disabled>
-<i data-lucide="check-circle-2" class="w-4 h-4 mr-2"></i> Finalizar Ruta
-</button>
-</div>
+<!-- Contenido dinámico -->
+<p class="text-center text-gray-500">Selecciona una ruta activa para ver sus detalles.</p>
 </div>
 <h3 class="font-semibold text-gray-700 mt-6 mb-3 flex items-center">
 <i data-lucide="list-ordered" class="w-4 h-4 mr-2 color-primary"></i> Tramos Asignados
@@ -386,8 +457,21 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 </div>
 </div>
 
+<!-- 3. Contenido de CLIENTES -->
+<div id="content-clientes" class="tab-content hidden">
+<div class="bg-white p-6 rounded-xl shadow-lg">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Listado de Clientes</h2>
+<div class="mb-4">
+<input type="text" id="customer-search" placeholder="Buscar cliente por nombre o teléfono..." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary">
+</div>
+<div id="customers-list" class="space-y-4">
+<p class="text-center text-gray-500" id="loading-customers">Cargando clientes...</p>
+</div>
+</div>
+</div>
 
-<!-- 3. Contenido de VEHÍCULOS (Autos) -->
+
+<!-- 4. Contenido de VEHÍCULOS (Autos) -->
 <div id="content-vehiculos" class="tab-content hidden">
 <!-- Formulario de Vehículo -->
 <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
@@ -406,7 +490,7 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 <input type="text" id="vehicle-plate" placeholder="Ej: ABC 123 (Único)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 <div class="md:col-span-2 mt-4">
-<button type="submit" class="w-full bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center">
+<button type="submit" class="w-full bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center btn-feedback">
 <i data-lucide="car-front" class="w-5 h-5 mr-2"></i> Guardar Vehículo
 </button>
 </div>
@@ -422,7 +506,7 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 </div>
 </div>
 
-<!-- 4. Contenido de CHOFERES -->
+<!-- 5. Contenido de CHOFERES -->
 <div id="content-choferes" class="tab-content hidden">
 <!-- Formulario de Chofer -->
 <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
@@ -441,7 +525,7 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 <input type="text" id="driver-phone" placeholder="Teléfono de contacto" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
 </div>
 <div class="md:col-span-2 mt-4">
-<button type="submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 flex items-center justify-center">
+<button type="submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 flex items-center justify-center btn-feedback">
 <i data-lucide="user-plus" class="w-5 h-5 mr-2"></i> Guardar Chofer
 </button>
 </div>
@@ -466,15 +550,15 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 <h3 class="text-xl font-bold text-gray-800 flex items-center">
 <i data-lucide="file-text" class="w-6 h-6 mr-2 color-accent"></i> Ticket Generado
 </h3>
-<button id="close-modal-btn" class="text-gray-400 hover:text-gray-600">
+<button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 btn-feedback">
 <i data-lucide="x" class="w-6 h-6"></i>
 </button>
 </div>
 
 <!-- Pestañas de Ticket (No se encoge) -->
 <div class="flex border-b border-gray-300 mb-4 flex-shrink-0">
-<button id="modal-tab-client" class="modal-tab-button active flex-1 py-2 px-1 text-center text-gray-600 text-sm transition duration-150">Mensaje Cliente</button>
-<button id="modal-tab-driver" class="modal-tab-button flex-1 py-2 px-1 text-center text-gray-600 text-sm transition duration-150">Ticket Receptoría</button>
+<button id="modal-tab-client" class="modal-tab-button active flex-1 py-2 px-1 text-center text-gray-600 text-sm transition duration-150 btn-feedback">Mensaje Cliente</button>
+<button id="modal-tab-driver" class="modal-tab-button flex-1 py-2 px-1 text-center text-gray-600 text-sm transition duration-150 btn-feedback">Ticket Receptoría</button>
 </div>
 
 <!-- Contenido del ticket (Esta área se scrollea) -->
@@ -482,23 +566,23 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 <div id="modal-content-client" class="modal-tab-content">
 <!-- El HTML del ticket del cliente se inyectará aquí -->
 </div>
-<div id="modal-content-driver" class_name="modal-tab-content hidden">
+<div id="modal-content-driver" class="modal-tab-content hidden">
 <!-- El HTML del ticket del chofer se inyectará aquí -->
 </div>
 </div>
 
 <!-- Acciones del Modal (No se encoge) -->
 <div class="mt-6 pt-4 border-t border-gray-300 flex flex-wrap gap-2 modal-actions-no-print flex-shrink-0">
-<button id="print-ticket-btn" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm">
+<button id="print-ticket-btn" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
 <i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir
 </button>
-<button id="share-whatsapp-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm">
+<button id="share-whatsapp-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
 <i data-lucide="message-circle" class="w-4 h-4 mr-2"></i> WhatsApp
 </button>
-<button id="share-email-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm">
+<button id="share-email-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
 <i data-lucide="mail" class="w-4 h-4 mr-2"></i> Email
 </button>
-<button id="copy-message-btn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm">
+<button id="copy-message-btn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
 <i data-lucide="copy" class="w-4 h-4 mr-2"></i> Copiar Texto
 </button>
 </div>
@@ -512,7 +596,7 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, onSnapshot, collection, query, where, updateDoc, serverTimestamp, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, onSnapshot, collection, query, where, updateDoc, serverTimestamp, deleteDoc, setLogLevel, getDocs, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Establecer nivel de log para depuración de Firestore
 setLogLevel('debug');
@@ -525,10 +609,12 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 let db, auth, userId;
 let driversData = []; // Caché para choferes
 let vehiclesData = []; // Caché para vehículos
+let customersData = []; // Caché para clientes
 let currentRouteData = null; // Ruta seleccionada en la pestaña Rutas
 let allTripsData = []; // Caché de todos los tickets
 let allRoutesData = [];
 let currentlyEditingTripId = null; // ID del viaje que se está editando
+let currentlyEditingRouteId = null; // ID de la ruta que se está editando
 
 // Almacena el TEXTO de los tickets generados para compartir
 let modalTicketData = {
@@ -558,6 +644,7 @@ function setupTabs() {
 const tabs = {
 'tab-viajes': 'content-viajes',
 'tab-rutas': 'content-rutas',
+'tab-clientes': 'content-clientes',
 'tab-vehiculos': 'content-vehiculos',
 'tab-choferes': 'content-choferes'
 };
@@ -569,8 +656,16 @@ document.querySelectorAll('.tab-content').forEach(content => content.classList.a
 button.classList.add('active');
 const contentId = tabs[button.id];
 if (contentId) {
-document.getElementById(contentId).classList.remove('hidden');
+const contentEl = document.getElementById(contentId);
+if (contentEl) {
+contentEl.classList.remove('hidden');
+} else {
+console.error(`Contenido no encontrado para ${button.id}: ${contentId}`);
 }
+} else {
+console.error(`ID de contenido no definido para ${button.id}`);
+}
+
 if (button.id === 'tab-rutas') {
 renderPendingTripsList();
 updateRouteDetails(currentRouteData);
@@ -581,7 +676,7 @@ lucide.createIcons();
 document.getElementById('content-viajes').classList.remove('hidden');
 document.getElementById('tab-viajes').classList.add('active');
 
-// Sub-Pestañas (Activos/Finalizados)
+// Sub-Pestañas (Viajes)
 document.getElementById('sub-tab-activos').addEventListener('click', () => {
 document.getElementById('content-activos').classList.remove('hidden');
 document.getElementById('content-finalizados').classList.add('hidden');
@@ -593,6 +688,20 @@ document.getElementById('content-activos').classList.add('hidden');
 document.getElementById('content-finalizados').classList.remove('hidden');
 document.getElementById('sub-tab-activos').classList.remove('active');
 document.getElementById('sub-tab-finalizados').classList.add('active');
+});
+
+// Sub-Pestañas (Rutas)
+document.getElementById('sub-tab-rutas-activas').addEventListener('click', () => {
+document.getElementById('content-rutas-activas').classList.remove('hidden');
+document.getElementById('content-rutas-finalizadas').classList.add('hidden');
+document.getElementById('sub-tab-rutas-activas').classList.add('active');
+document.getElementById('sub-tab-rutas-finalizadas').classList.remove('active');
+});
+document.getElementById('sub-tab-rutas-finalizadas').addEventListener('click', () => {
+document.getElementById('content-rutas-activas').classList.add('hidden');
+document.getElementById('content-rutas-finalizadas').classList.remove('hidden');
+document.getElementById('sub-tab-rutas-activas').classList.remove('active');
+document.getElementById('sub-tab-rutas-finalizadas').classList.add('active');
 });
 }
 
@@ -611,9 +720,10 @@ userId = user.uid;
 authStatusEl.textContent = `✅ Conectado | ID de Usuario: ${userId}`;
 listenForVehicles();
 listenForDrivers();
+listenForCustomers(); // NUEVO
 listenForTrips();
 listenForRoutes();
-setupRouteAssignmentLogic();
+setupRouteAssignmentLogic(); // Llamar después de que los listeners estén listos
 } else {
 if (initialAuthToken) {
 await signInWithCustomToken(auth, initialAuthToken);
@@ -636,20 +746,16 @@ showStatus('Falta la configuración de Firebase para la persistencia de datos.',
 // --- COLECCIONES ---
 const VEHICLES_COLLECTION = () => `artifacts/${appId}/users/${userId}/vehicles`;
 const DRIVERS_COLLECTION = () => `artifacts/${appId}/users/${userId}/drivers`;
+const CUSTOMERS_COLLECTION = () => `artifacts/${appId}/users/${userId}/customers`; // NUEVO
 const TRIPS_COLLECTION = () => `artifacts/${appId}/users/${userId}/trips`;
 const ROUTES_COLLECTION = () => `artifacts/${appId}/users/${userId}/routes`;
 
 // --- SECCIÓN DE GEMINI API ---
-
-/**
-* Maneja las llamadas a la API de Gemini con reintento y backoff exponencial.
-*/
 async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
 try {
 const response = await fetch(url, options);
 if (!response.ok) {
 if (response.status === 429 && retries > 0) {
-// console.warn(`Throttled. Retrying in ${delay}ms... (${retries} retries left)`);
 await new Promise(resolve => setTimeout(resolve, delay));
 return fetchWithBackoff(url, options, retries - 1, delay * 2);
 }
@@ -657,49 +763,35 @@ throw new Error(`HTTP error! status: ${response.status}`);
 }
 return response.json();
 } catch (error) {
-// console.error("Error fetching Gemini:", error);
 if (retries > 0) {
-// console.warn(`Fetch error. Retrying in ${delay}ms... (${retries} retries left)`);
 await new Promise(resolve => setTimeout(resolve, delay));
 return fetchWithBackoff(url, options, retries - 1, delay * 2);
 }
-// console.error("Max retries reached. Failing.");
 throw error;
 }
 }
 
-/**
-* Llama a la API de Gemini para generar contenido.
-* @param {string} userPrompt El prompt del usuario.
-* @param {string} systemPrompt (Opcional) La instrucción del sistema.
-* @returns {Promise<string>} El texto generado.
-*/
 async function callGemini(userPrompt, systemPrompt = "") {
-const apiKey = ""; // Dejado en blanco, como se indica en las instrucciones
+const apiKey = "";
 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
 const payload = {
 contents: [{ parts: [{ text: userPrompt }] }],
 };
-
 if (systemPrompt) {
 payload.systemInstruction = {
 parts: [{ text: systemPrompt }]
 };
 }
-
 try {
 const result = await fetchWithBackoff(apiUrl, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(payload)
 });
-
 const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
 if (text) {
 return text;
 } else {
-// console.warn("No text returned from Gemini:", result);
 return "No se pudo generar el resumen.";
 }
 } catch (error) {
@@ -708,15 +800,8 @@ return "Error al contactar la IA.";
 }
 }
 
-/**
-* Genera un resumen inteligente para el chofer usando Gemini.
-* @param {object} route Los datos de la ruta.
-* @param {Array<object>} routeTrips Los viajes asignados a esa ruta.
-* @returns {Promise<string>} Un resumen en HTML/texto.
-*/
 async function getGeminiDriverSummary(route, routeTrips) {
 const systemPrompt = "Sos un asistente de logística para 'MG Transporte' en Argentina. Tu tono es amigable, profesional y usás 'vos' en lugar de 'tú'. Generá un resumen corto y útil para el chofer. NO uses markdown, solo texto plano y viñetas con '*' o '-'.";
-
 const simplifiedTrips = routeTrips.map((trip, index) => ({
 parada: index + 1,
 cliente: trip.clientName,
@@ -727,30 +812,22 @@ pasajeros: trip.pasajeros || 1,
 mascotas: trip.mascotas || 0,
 tamano_mascota: trip.petSize || 'ninguno'
 }));
-
 const userPrompt = `
 Generá un resumen para el chofer ${route.driverName} para su ruta del ${route.date}.
-
 Datos de la Ruta:
 - Total de paradas: ${routeTrips.length}
 - Ganancia Bruta Total: ${formatPrice(route.totalPrice)}
 - Vehículo: ${route.vehicleModel} (${route.vehiclePlate})
-
 Listado de Viajes (Tramos):
 ${JSON.stringify(simplifiedTrips, null, 2)}
-
 Tu tarea es escribir un resumen amigable en 3-4 viñetas. Enfocate SÓLO en lo más importante.
 Cosas a destacar (si existen):
 - ¿Hay mascotas? ¿De qué tamaño? (¡Muy importante!)
 - ¿Hay paradas que estén muy cerca en la misma localidad?
 - ¿Hay algún viaje con muchos pasajeros?
-
 Empezá con "¡Hola ${route.driverName}! Acá tenés un resumen rápido de tu ruta:"
 `;
-
 let summaryText = await callGemini(userPrompt, systemPrompt);
-
-// Formatear el resumen a HTML simple
 const summaryHtml = `
 <div class="gemini-summary">
 <p class="gemini-summary-title">
@@ -760,17 +837,13 @@ Resumen del Chofer (IA)
 ${summaryText.replace(/\n/g, '<br>').replace(/\* /g, '&#8226; ').replace(/- /g, '&#8226; ')}
 </div>
 `;
-
-// Texto plano para copiar
 const summaryPlainText = summaryText
 .replace(/<br>/g, '\n')
 .replace(/&#8226;/g, '*');
-
 return { html: summaryHtml, text: summaryPlainText };
 }
 
 // --- FIN SECCIÓN GEMINI ---
-
 
 // --- LÓGICA DE VEHÍCULOS ---
 document.getElementById('vehicle-form').addEventListener('submit', async (e) => {
@@ -815,7 +888,7 @@ listEl.innerHTML += `
 <p class="font-semibold text-gray-800">${data.model} (${data.plate})</p>
 <p class="text-sm text-gray-500">Color: ${data.color}</p>
 </div>
-<button data-id="${data.id}" data-plate="${data.plate}" class="delete-vehicle-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150">
+<button data-id="${data.id}" data-plate="${data.plate}" class="delete-vehicle-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
 <i data-lucide="trash-2" class="w-5 h-5"></i>
 </button>
 </div>
@@ -889,7 +962,7 @@ listEl.innerHTML += `
 <p class="font-semibold text-gray-800">${data.name}</p>
 <p class="text-sm text-gray-500">DNI: ${data.dni} | Teléfono: ${data.phone}</p>
 </div>
-<button data-id="${data.id}" data-name="${data.name}" class="delete-driver-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150">
+<button data-id="${data.id}" data-name="${data.name}" class="delete-driver-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
 <i data-lucide="trash-2" class="w-5 h-5"></i>
 </button>
 </div>
@@ -920,6 +993,139 @@ showStatus('Error al eliminar chofer: ' + error.message, 'error');
 }
 }
 
+// --- LÓGICA DE CLIENTES (NUEVA) ---
+
+// Escuchar clientes y manejar búsqueda
+function listenForCustomers() {
+const q = collection(db, CUSTOMERS_COLLECTION());
+onSnapshot(q, (snapshot) => {
+customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+renderCustomersList(customersData);
+}, (error) => {
+console.error("Error en oyente de clientes:", error);
+document.getElementById('customers-list').innerHTML = 'Error al cargar clientes.';
+});
+
+// Filtro de búsqueda
+document.getElementById('customer-search').addEventListener('input', (e) => {
+const searchTerm = e.target.value.toLowerCase();
+const filteredCustomers = customersData.filter(cust =>
+cust.name.toLowerCase().includes(searchTerm) ||
+cust.phone.toLowerCase().includes(searchTerm)
+);
+renderCustomersList(filteredCustomers);
+});
+}
+
+// Renderizar lista de clientes
+function renderCustomersList(customers) {
+const listEl = document.getElementById('customers-list');
+listEl.innerHTML = '';
+if (document.getElementById('loading-customers')) {
+document.getElementById('loading-customers').remove();
+}
+
+if (customers.length === 0) {
+listEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay clientes registrados.</p>';
+return;
+}
+
+customers.forEach(data => {
+let addressesHtml = '<p class="text-xs text-gray-500">Sin direcciones guardadas.</p>';
+if (data.addresses && data.addresses.length > 0) {
+addressesHtml = data.addresses.map(addr =>
+`<li class="text-xs text-gray-600 bg-gray-100 p-1 rounded">${addr.address}, ${addr.locality}</li>`
+).join('');
+addressesHtml = `<ul class="space-y-1 mt-2">${addressesHtml}</ul>`;
+}
+
+listEl.innerHTML += `
+<div class="p-4 bg-gray-50 rounded-lg border border-l-4 border-accent">
+<div class="flex justify-between items-center">
+<div>
+<p class="font-semibold text-gray-800">${data.name}</p>
+<p class="text-sm text-gray-500"><i data-lucide="phone" class="w-3 h-3 inline-block mr-1"></i> ${data.phone}</p>
+</div>
+<button data-id="${data.id}" data-name="${data.name}" class="delete-customer-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
+<i data-lucide="trash-2" class="w-5 h-5"></i>
+</button>
+</div>
+<div class="mt-2">
+<p class="text-sm font-medium text-gray-700">Direcciones de Origen Guardadas:</p>
+${addressesHtml}
+</div>
+</div>
+`;
+});
+
+lucide.createIcons();
+document.querySelectorAll('.delete-customer-btn').forEach(btn => {
+btn.addEventListener('click', handleDeleteCustomer);
+});
+}
+
+// Guardar o actualizar cliente (llamado desde el submit de viaje)
+async function saveOrUpdateCustomer(tripData) {
+if (!tripData.clientPhone || tripData.clientPhone.trim() === '') {
+console.warn("No se guardó el cliente porque falta el teléfono.");
+return; // No guardar si no hay teléfono
+}
+
+const newAddress = {
+address: tripData.addressOrigin,
+locality: tripData.localityOrigin
+};
+
+const q = query(collection(db, CUSTOMERS_COLLECTION()), where("phone", "==", tripData.clientPhone));
+const querySnapshot = await getDocs(q);
+
+if (querySnapshot.empty) {
+// Cliente nuevo
+await addDoc(collection(db, CUSTOMERS_COLLECTION()), {
+name: tripData.clientName,
+phone: tripData.clientPhone,
+addresses: [newAddress], // Guardar primera dirección
+createdAt: serverTimestamp()
+});
+} else {
+// Cliente existente
+const customerDoc = querySnapshot.docs[0];
+const customerData = customerDoc.data();
+
+// Prevenir direcciones duplicadas
+const addressExists = customerData.addresses?.some(addr =>
+addr.address === newAddress.address && addr.locality === newAddress.locality
+) || false;
+
+if (!addressExists) {
+await updateDoc(customerDoc.ref, {
+name: tripData.clientName, // Actualizar nombre por si cambia
+addresses: arrayUnion(newAddress) // Añadir nueva dirección al array
+});
+} else {
+// Si la dirección ya existe, al menos actualizamos el nombre si cambió
+if (customerData.name !== tripData.clientName) {
+await updateDoc(customerDoc.ref, { name: tripData.clientName });
+}
+}
+}
+}
+
+// Borrar cliente
+async function handleDeleteCustomer(e) {
+const customerId = e.currentTarget.getAttribute('data-id');
+const customerName = e.currentTarget.getAttribute('data-name');
+if (prompt(`¿Seguro que deseas eliminar al cliente ${customerName}? Esta acción es permanente. Escribe 'eliminar' para confirmar.`) === 'eliminar') {
+try {
+await deleteDoc(doc(db, CUSTOMERS_COLLECTION(), customerId));
+showStatus(`Cliente ${customerName} eliminado.`);
+} catch (error) {
+console.error("Error al eliminar cliente:", error);
+showStatus('Error al eliminar cliente: ' + error.message, 'error');
+}
+}
+}
+
 
 // --- LÓGICA DE VIAJES (Tickets) ---
 
@@ -943,33 +1149,43 @@ mascotas: parseInt(document.getElementById('trip-pets').value, 10),
 petSize: document.getElementById('trip-pet-size').value,
 };
 
+if (!tripData.date || !tripData.time) {
+    showStatus('La fecha y hora del viaje son obligatorias.', 'error');
+    return;
+}
+
+if (tripData.clientPhone.trim() === '') {
+showStatus('El teléfono del cliente es obligatorio para guardar.', 'error');
+return;
+}
+
+
 try {
+// Guardar cliente (NUEVO)
+await saveOrUpdateCustomer(tripData);
+
 if (currentlyEditingTripId) {
-// Actualizar Viaje Existente
 const tripRef = doc(db, TRIPS_COLLECTION(), currentlyEditingTripId);
 await updateDoc(tripRef, tripData);
 showStatus(`Ticket de ${tripData.clientName} actualizado.`, 'success');
 } else {
-// Crear Nuevo Viaje
 tripData.isAssigned = false;
 tripData.assignedRouteId = null;
-tripData.status = 'Activo'; // Nuevo campo de estado
+tripData.status = 'Activo';
 tripData.createdAt = serverTimestamp();
 tripData.ticketId = Math.random().toString(36).substring(2, 9).toUpperCase();
 
 await addDoc(collection(db, TRIPS_COLLECTION()), tripData);
 showStatus(`Ticket #${tripData.ticketId} para ${tripData.clientName} registrado.`, 'success');
-// Mostrar modal solo al crear, ahora es async
-await showClientTicketModal(tripData, e.currentTarget);
+await showClientTicketModal(tripData); // Mostrar modal al crear
 }
-handleCancelEdit(); // Limpia el formulario y el estado de edición
+handleCancelEdit();
 } catch (error) {
 console.error("Error al guardar viaje:", error);
 showStatus('Error al guardar el viaje: ' + error.message, 'error');
 }
 });
 
-// Botón Cancelar Edición
 document.getElementById('cancel-edit-btn').addEventListener('click', handleCancelEdit);
 
 function handleCancelEdit() {
@@ -981,10 +1197,9 @@ document.getElementById('cancel-edit-btn').classList.add('hidden');
 lucide.createIcons();
 }
 
-// Iniciar edición
 function handleStartEditTrip(e) {
 const tripData = JSON.parse(e.currentTarget.getAttribute('data-trip'));
-window.scrollTo(0, 0); // Subir al formulario
+window.scrollTo(0, 0);
 
 currentlyEditingTripId = tripData.id;
 document.getElementById('editing-trip-id').value = tripData.id;
@@ -1006,10 +1221,19 @@ document.getElementById('cancel-edit-btn').classList.remove('hidden');
 lucide.createIcons();
 }
 
-// Finalizar viaje
 async function handleFinalizeTrip(e) {
-const tripId = e.currentTarget.getAttribute('data-id');
-const clientName = e.currentTarget.getAttribute('data-client');
+const button = e.currentTarget;
+const tripId = button.getAttribute('data-id');
+const clientName = button.getAttribute('data-client');
+
+// Verificar si está asignado (usando la caché allTripsData)
+const trip = allTripsData.find(t => t.id === tripId);
+if (trip && trip.isAssigned) {
+showStatus(`Error: No se puede finalizar un ticket asignado a una ruta (${trip.assignedRouteId.slice(-4)}). Desasígnalo primero.`, 'error');
+return;
+}
+
+
 if (prompt(`¿Seguro que deseas finalizar el viaje de ${clientName}? El ticket se moverá a 'Finalizados'. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
 try {
 const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
@@ -1022,20 +1246,19 @@ showStatus('Error al finalizar viaje: ' + error.message, 'error');
 }
 }
 
-// Escuchar todos los viajes
 function listenForTrips() {
 const q = collection(db, TRIPS_COLLECTION());
 onSnapshot(q, (snapshot) => {
 allTripsData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }));
-renderTripLists(allTripsData); // Renderizar en ambas listas
-renderPendingTripsList(); // Actualizar lista en pestaña Rutas
+renderTripLists(allTripsData);
+renderPendingTripsList();
 }, (error) => {
 console.error("Error en oyente de viajes:", error);
-document.getElementById('trips-list-active').innerHTML = 'Error al cargar tickets.';
+const listEl = document.getElementById('trips-list-active');
+if(listEl) listEl.innerHTML = 'Error al cargar tickets.';
 });
 }
 
-// Renderiza las listas de Activos y Finalizados
 function renderTripLists(trips) {
 const activeListEl = document.getElementById('trips-list-active');
 const finishedListEl = document.getElementById('trips-list-finished');
@@ -1045,7 +1268,6 @@ finishedListEl.innerHTML = '';
 const activeTrips = trips.filter(t => t.status !== 'Finalizado').sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
 const finishedTrips = trips.filter(t => t.status === 'Finalizado').sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
 
-// Renderizar Activos
 if (document.getElementById('loading-trips-active')) document.getElementById('loading-trips-active').remove();
 if (activeTrips.length === 0) {
 activeListEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay tickets activos.</p>';
@@ -1053,7 +1275,6 @@ activeListEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-
 activeTrips.forEach(data => activeListEl.innerHTML += createTripCardHtml(data, 'active'));
 }
 
-// Renderizar Finalizados
 if (document.getElementById('loading-trips-finished')) document.getElementById('loading-trips-finished').remove();
 if (finishedTrips.length === 0) {
 finishedListEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay tickets finalizados.</p>';
@@ -1065,7 +1286,6 @@ lucide.createIcons();
 setupTripCardButtons();
 }
 
-// HTML para una tarjeta de viaje
 function createTripCardHtml(data, type) {
 const assignedText = data.isAssigned ?
 `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Asignado a Ruta #${data.assignedRouteId.slice(-4)}</span>` :
@@ -1078,24 +1298,31 @@ petInfo += ` (${data.petSize})`;
 
 let buttons = '';
 if (type === 'active') {
+const isAssigned = data.isAssigned;
+const finalizeDisabled = isAssigned ? 'disabled' : '';
+const finalizeTitle = isAssigned ? 'Desasigna este ticket de su ruta para poder finalizarlo.' : 'Finalizar ticket';
+
 buttons = `
-<button data-trip='${JSON.stringify(data)}' class="edit-trip-btn text-blue-600 hover:text-blue-800 text-xs font-medium mr-2 p-1 rounded-lg bg-blue-100">
+<button data-trip='${JSON.stringify(data)}' class="edit-trip-btn text-blue-600 hover:text-blue-800 text-xs font-medium mr-2 p-1 rounded-lg bg-blue-100 btn-feedback">
 <i data-lucide="edit-2" class="w-4 h-4"></i> Editar
 </button>
-<button data-id="${data.id}" data-client="${data.clientName}" class="finalize-trip-btn text-green-600 hover:text-green-800 text-xs font-medium mr-2 p-1 rounded-lg bg-green-100">
+<button data-id="${data.id}" data-client="${data.clientName}" class="finalize-trip-btn text-green-600 hover:text-green-800 text-xs font-medium mr-2 p-1 rounded-lg bg-green-100 btn-feedback" ${finalizeDisabled} title="${finalizeTitle}">
 <i data-lucide="check-circle" class="w-4 h-4"></i> Finalizar
 </button>
-<button data-id="${data.id}" data-client="${data.clientName}" class="delete-trip-btn text-red-500 hover:text-red-700 text-xs font-medium p-1 rounded-lg bg-red-100">
+<button data-id="${data.id}" data-client="${data.clientName}" data-is-assigned="${isAssigned}" class="delete-trip-btn text-red-500 hover:text-red-700 text-xs font-medium p-1 rounded-lg bg-red-100 btn-feedback">
 <i data-lucide="trash-2" class="w-4 h-4"></i> Borrar
 </button>
 `;
 } else {
 buttons = `
-<button data-id="${data.id}" data-client="${data.clientName}" class="delete-trip-btn text-red-500 hover:text-red-700 text-xs font-medium p-1 rounded-lg bg-red-100">
+<button data-id="${data.id}" data-client="${data.clientName}" data-is-assigned="false" class="delete-trip-btn text-red-500 hover:text-red-700 text-xs font-medium p-1 rounded-lg bg-red-100 btn-feedback">
 <i data-lucide="trash-2" class="w-4 h-4"></i> Borrar
 </button>
 `;
 }
+
+// Añadido: Fecha junto a la Hora
+const dateTimeInfo = `<i data-lucide="calendar-clock" class="w-4 h-4 inline-block mr-1 text-blue-500"></i> ${data.date} a las ${data.time}`;
 
 return `
 <div class="bg-gray-50 p-4 border rounded-xl shadow-sm border-l-4 ${data.isAssigned ? 'border-green-500' : 'border-red-500'}">
@@ -1112,7 +1339,7 @@ ${type === 'active' ? assignedText : '<span class="bg-gray-200 text-gray-600 px-
 <i data-lucide="flag" class="w-4 h-4 inline-block mr-1 text-green-500"></i> ${data.addressDest}, ${data.localityDest}
 </p>
 <p class="text-sm text-gray-500 mb-2">
-<i data-lucide="clock" class="w-4 h-4 inline-block mr-1 text-blue-500"></i> ${data.date} a las ${data.time}
+${dateTimeInfo}
 </p>
 <p class="text-sm text-gray-500 mb-2">
 <i data-lucide="users" class="w-4 h-4 inline-block mr-1 text-blue-500"></i> Pasajeros: ${data.pasajeros || 1} |
@@ -1121,7 +1348,7 @@ ${type === 'active' ? assignedText : '<span class="bg-gray-200 text-gray-600 px-
 <div class="flex justify-between items-center pt-2 border-t border-gray-200">
 <span class="font-bold text-green-600">${formatPrice(data.price)}</span>
 <div class="flex items-center">
-<button data-trip='${JSON.stringify(data)}' class="generate-client-ticket-btn text-primary hover:underline text-sm font-medium mr-4 transition-all duration-150">
+<button data-trip='${JSON.stringify(data)}' class="generate-client-ticket-btn text-primary hover:underline text-sm font-medium mr-4 transition-all duration-150 btn-feedback">
 Ver Ticket
 </button>
 <div class="flex gap-2">
@@ -1133,22 +1360,21 @@ ${buttons}
 `;
 }
 
-// Configura los botones de las tarjetas
 function setupTripCardButtons() {
 document.querySelectorAll('.generate-client-ticket-btn').forEach(btn => {
-btn.addEventListener('click', async (e) => { // <-- Ahora es async
+btn.addEventListener('click', async (e) => {
 const button = e.currentTarget;
-const originalText = button.innerHTML;
+const originalHtml = button.innerHTML;
 button.innerHTML = 'Generando...';
 button.disabled = true;
 try {
 const tripData = JSON.parse(button.getAttribute('data-trip'));
-await showClientTicketModal(tripData); // <-- Ahora se espera
+await showClientTicketModal(tripData);
 } catch (error) {
 console.error("Error al generar ticket:", error);
 showStatus("Error al generar resumen de IA.", "error");
 } finally {
-button.innerHTML = originalText;
+button.innerHTML = originalHtml;
 button.disabled = false;
 }
 });
@@ -1164,17 +1390,17 @@ btn.addEventListener('click', handleFinalizeTrip);
 });
 }
 
-// Borrar viaje
 async function handleDeleteTrip(e) {
-const tripId = e.currentTarget.getAttribute('data-id');
-const clientName = e.currentTarget.getAttribute('data-client');
-const trip = allTripsData.find(t => t.id === tripId);
-let confirmMsg = `¿Seguro que deseas eliminar el viaje de ${clientName}? Esta acción es permanente.`;
-if (trip && trip.isAssigned) {
-confirmMsg = `ADVERTENCIA: Este ticket está asignado a una ruta. ¿Estás seguro de que quieres eliminarlo? Deberás desasignarlo manualmente de la ruta.\n\nEscribe 'eliminar' para confirmar.`;
-} else {
-confirmMsg = `¿Seguro que deseas eliminar el viaje de ${clientName}? Escribe 'eliminar' para confirmar.`;
+const button = e.currentTarget;
+const tripId = button.getAttribute('data-id');
+const clientName = button.getAttribute('data-client');
+const isAssigned = button.getAttribute('data-is-assigned') === 'true';
+
+let confirmMsg = `¿Seguro que deseas eliminar el viaje de ${clientName}? Esta acción es permanente. Escribe 'eliminar' para confirmar.`;
+if (isAssigned) {
+confirmMsg = `ADVERTENCIA: Este ticket está asignado a una ruta. Si lo borras, se eliminará permanentemente pero NO se desasignará de la ruta (puede causar errores de precio). Se recomienda desasignarlo primero desde la pestaña 'Rutas'.\n\n¿Eliminar de todas formas? Escribe 'eliminar' para confirmar.`;
 }
+
 if (prompt(confirmMsg) === 'eliminar') {
 try {
 await deleteDoc(doc(db, TRIPS_COLLECTION(), tripId));
@@ -1189,132 +1415,317 @@ showStatus('Error al eliminar viaje: ' + error.message, 'error');
 
 // --- LÓGICA DE RUTAS (Asignación) ---
 function setupRouteAssignmentLogic() {
-document.getElementById('route-form').addEventListener('submit', handleCreateRoute);
-// El click handler ahora es async
-document.getElementById('view-route-ticket-btn').addEventListener('click', handleViewRouteTicket);
-document.getElementById('finalize-route-btn').addEventListener('click', handleFinalizeRoute);
+  const routeForm = document.getElementById('route-form');
+  const cancelEditBtn = document.getElementById('cancel-route-edit-btn');
+
+  if (routeForm) {
+    routeForm.addEventListener('submit', handleSaveRoute);
+  } else {
+    console.error("Elemento 'route-form' no encontrado.");
+  }
+
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', handleCancelRouteEdit);
+  } else {
+    console.error("Elemento 'cancel-route-edit-btn' no encontrado.");
+  }
+
+  // Los listeners para botones dentro de 'route-details-info'
+  // se añaden dinámicamente en updateRouteDetails
 }
+
 
 function listenForRoutes() {
 const q = collection(db, ROUTES_COLLECTION());
 onSnapshot(q, (snapshot) => {
 allRoutesData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }));
-renderActiveRoutesList(allRoutesData);
+renderRouteLists(allRoutesData); // Renderizar ambas listas
 if (currentRouteData) {
 const updatedRoute = allRoutesData.find(r => r.id === currentRouteData.id);
 if (updatedRoute) {
 currentRouteData = updatedRoute;
 updateRouteDetails(updatedRoute);
 } else {
+// Si la ruta actual ya no existe (fue borrada), limpiamos la selección
 currentRouteData = null;
 updateRouteDetails(null);
 }
 }
 }, (error) => {
 console.error("Error en oyente de rutas:", error);
-document.getElementById('active-routes-list').innerHTML = 'Error al cargar rutas.';
+const listEl = document.getElementById('active-routes-list');
+if(listEl) listEl.innerHTML = 'Error al cargar rutas.';
 });
 }
 
-async function handleCreateRoute(e) {
+async function handleSaveRoute(e) {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
+
 const driverId = document.getElementById('route-driver-id').value;
 const vehicleId = document.getElementById('route-vehicle-id').value;
 const date = document.getElementById('route-date').value;
 const driver = driversData.find(d => d.id === driverId);
 const vehicle = vehiclesData.find(v => v.id === vehicleId);
+
 if (!driver || !vehicle) {
 showStatus('Debe seleccionar un chofer y un vehículo válidos.', 'error');
 return;
 }
-const newRoute = {
+
+const routeData = {
 driverId, driverName: driver.name, driverDni: driver.dni, driverPhone: driver.phone,
 vehicleId, vehiclePlate: vehicle.plate, vehicleModel: vehicle.model, vehicleColor: vehicle.color,
-date, trips: [], totalPrice: 0, status: 'Activa', createdAt: serverTimestamp()
+date,
 };
+
+const editingId = currentlyEditingRouteId;
+
 try {
-const docRef = await addDoc(collection(db, ROUTES_COLLECTION()), newRoute);
+if (editingId) {
+// Actualizar Ruta
+const routeRef = doc(db, ROUTES_COLLECTION(), editingId);
+await updateDoc(routeRef, routeData);
+showStatus(`Ruta #${editingId.slice(-4)} actualizada.`, 'success');
+} else {
+// Crear Ruta
+routeData.trips = [];
+routeData.totalPrice = 0;
+routeData.status = 'Activa';
+routeData.createdAt = serverTimestamp();
+const docRef = await addDoc(collection(db, ROUTES_COLLECTION()), routeData);
 showStatus(`Ruta #${docRef.id.slice(-4)} creada para ${driver.name}.`, 'success');
-document.getElementById('route-form').reset();
+}
+handleCancelRouteEdit();
 } catch (error) {
-console.error("Error al crear ruta:", error);
-showStatus('Error al crear ruta: ' + error.message, 'error');
+console.error("Error al guardar ruta:", error);
+showStatus('Error al guardar ruta: ' + error.message, 'error');
 }
 }
 
-function renderActiveRoutesList(routes) {
-const listEl = document.getElementById('active-routes-list');
-listEl.innerHTML = '';
-if (document.getElementById('loading-routes')) document.getElementById('loading-routes').remove();
-const activeRoutes = routes.filter(r => r.status === 'Activa');
-if (activeRoutes.length === 0) {
-listEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas activas.</p>';
-return;
+function handleCancelRouteEdit() {
+currentlyEditingRouteId = null;
+document.getElementById('route-form').reset();
+document.getElementById('route-form-title').textContent = 'Crear Nueva Ruta';
+document.getElementById('save-route-btn').innerHTML = '<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Crear Ruta Vacía';
+document.getElementById('cancel-route-edit-btn').classList.add('hidden');
+lucide.createIcons();
 }
+
+function handleStartEditRoute(e) {
+const routeData = JSON.parse(e.currentTarget.getAttribute('data-route'));
+window.scrollTo(0, 0);
+
+currentlyEditingRouteId = routeData.id;
+document.getElementById('route-driver-id').value = routeData.driverId;
+document.getElementById('route-vehicle-id').value = routeData.vehicleId;
+document.getElementById('route-date').value = routeData.date;
+
+document.getElementById('route-form-title').textContent = `Editando Ruta #${routeData.id.slice(-4)}`;
+document.getElementById('save-route-btn').innerHTML = '<i data-lucide="save" class="w-5 h-5 mr-2"></i> Guardar Cambios';
+document.getElementById('cancel-route-edit-btn').classList.remove('hidden');
+lucide.createIcons();
+}
+
+async function handleFinalizeRouteFromCard(e) {
+const routeId = e.currentTarget.getAttribute('data-id');
+const route = allRoutesData.find(r => r.id === routeId);
+if (!route) return;
+
+if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
+try {
+const batch = writeBatch(db);
+
+// 1. Finalizar todos los trips
+route.trips.forEach(tripId => {
+const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+batch.update(tripRef, { status: 'Finalizado' });
+});
+
+// 2. Finalizar la ruta
+const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+batch.update(routeRef, { status: 'Finalizada', finishedAt: serverTimestamp() });
+
+await batch.commit();
+
+if (currentRouteData && currentRouteData.id === routeId) {
+currentRouteData = null;
+updateRouteDetails(null);
+}
+showStatus(`Ruta #${routeId.slice(-4)} finalizada con éxito.`, 'success');
+} catch (error) {
+console.error("Error al finalizar ruta:", error);
+showStatus('Error al finalizar ruta: ' + error.message, 'error');
+}
+}
+}
+
+async function handleDeleteRoute(e) {
+const routeId = e.currentTarget.getAttribute('data-id');
+const route = allRoutesData.find(r => r.id === routeId);
+if (!route) return;
+
+if (prompt(`¿Seguro que deseas ELIMINAR la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados volverán a estar 'Pendientes'. Escribe 'eliminar' para confirmar.`) === 'eliminar') {
+try {
+const batch = writeBatch(db);
+
+// 1. Desasignar todos los trips
+route.trips.forEach(tripId => {
+const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+});
+
+// 2. Eliminar la ruta
+const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+batch.delete(routeRef);
+
+await batch.commit();
+
+if (currentRouteData && currentRouteData.id === routeId) {
+currentRouteData = null;
+updateRouteDetails(null);
+}
+showStatus(`Ruta #${routeId.slice(-4)} eliminada.`, 'success');
+} catch (error) {
+console.error("Error al eliminar ruta:", error);
+showStatus('Error al eliminar ruta: ' + error.message, 'error');
+}
+}
+}
+
+
+function renderRouteLists(routes) {
+const activeListEl = document.getElementById('active-routes-list');
+const finishedListEl = document.getElementById('finished-routes-list');
+activeListEl.innerHTML = '';
+finishedListEl.innerHTML = '';
+
+const activeRoutes = routes.filter(r => r.status === 'Activa');
+const finishedRoutes = routes.filter(r => r.status === 'Finalizada');
+
+// Activas
+if (document.getElementById('loading-routes-active')) document.getElementById('loading-routes-active').remove();
+if (activeRoutes.length === 0) {
+activeListEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas activas.</p>';
+} else {
 activeRoutes.forEach(route => {
 const tripCount = route.trips.length;
 const total = formatPrice(route.totalPrice);
-listEl.innerHTML += `
-<div data-id="${route.id}" class="route-select-card cursor-pointer p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card hover:bg-yellow-50 transition duration-150">
-<div class="flex justify-between items-center">
+activeListEl.innerHTML += `
+<div class="p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card">
+<div class="flex justify-between items-center mb-2">
 <p class="font-semibold text-gray-800">Ruta #${route.id.slice(-4)} (${route.date})</p>
 <span class="text-xs font-medium text-primary">${total}</span>
 </div>
 <p class="text-sm text-gray-600">Chofer: ${route.driverName}</p>
-<p class="text-xs text-gray-500">${tripCount} Tramo(s) asignado(s)</p>
+<p class="text-xs text-gray-500">${tripCount} Tramo(s)</p>
+<div class="flex items-center justify-between mt-3 pt-2 border-t">
+<button data-id="${route.id}" class="route-select-card text-primary hover:underline text-sm font-medium btn-feedback">
+Ver Detalles
+</button>
+<div class="flex gap-2">
+<button data-route='${JSON.stringify(route)}' class="edit-route-btn text-blue-600 hover:text-blue-800 p-1 rounded-lg bg-blue-100 btn-feedback" title="Editar Ruta">
+<i data-lucide="edit-2" class="w-4 h-4"></i>
+</button>
+<button data-id="${route.id}" class="finalize-route-btn-card text-green-600 hover:text-green-800 p-1 rounded-lg bg-green-100 btn-feedback" title="Finalizar Ruta">
+<i data-lucide="check-circle" class="w-4 h-4"></i>
+</button>
+<button data-id="${route.id}" class="delete-route-btn text-red-500 hover:text-red-700 p-1 rounded-lg bg-red-100 btn-feedback" title="Eliminar Ruta">
+<i data-lucide="trash-2" class="w-4 h-4"></i>
+</button>
+</div>
+</div>
 </div>
 `;
 });
-document.querySelectorAll('.route-select-card').forEach(card => {
-card.addEventListener('click', (e) => {
+}
+
+// Finalizadas
+if (document.getElementById('loading-routes-finished')) document.getElementById('loading-routes-finished').remove();
+if (finishedRoutes.length === 0) {
+finishedListEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas finalizadas.</p>';
+} else {
+finishedRoutes.forEach(route => {
+const tripCount = route.trips.length;
+const total = formatPrice(route.totalPrice);
+finishedListEl.innerHTML += `
+<div class="p-3 bg-gray-100 rounded-lg border border-gray-300 opacity-80">
+<div class="flex justify-between items-center mb-2">
+<p class="font-semibold text-gray-600">Ruta #${route.id.slice(-4)} (${route.date})</p>
+<span class="text-xs font-medium text-gray-600">${total}</span>
+</div>
+<p class="text-sm text-gray-600">Chofer: ${route.driverName}</p>
+<p class="text-xs text-gray-500">${tripCount} Tramo(s)</p>
+<div class="flex items-center justify-end mt-3 pt-2 border-t">
+<button data-id="${route.id}" class="delete-route-btn text-red-500 hover:text-red-700 p-1 rounded-lg bg-red-100 btn-feedback" title="Eliminar Ruta">
+<i data-lucide="trash-2" class="w-4 h-4"></i>
+</button>
+</div>
+</div>
+`;
+});
+}
+
+lucide.createIcons();
+// Configurar eventos para los botones de las tarjetas
+document.querySelectorAll('.route-select-card').forEach(btn => {
+btn.addEventListener('click', (e) => {
 const routeId = e.currentTarget.getAttribute('data-id');
 currentRouteData = allRoutesData.find(r => r.id === routeId);
 updateRouteDetails(currentRouteData);
-document.querySelectorAll('.route-select-card').forEach(c => c.classList.remove('bg-yellow-100', 'border-yellow-400'));
-e.currentTarget.classList.add('bg-yellow-100', 'border-yellow-400');
+// Highlight selection
+document.querySelectorAll('#active-routes-list .route-status-card').forEach(card => card.classList.remove('bg-yellow-100', 'border-yellow-400'));
+e.currentTarget.closest('.route-status-card').classList.add('bg-yellow-100', 'border-yellow-400');
+
 });
+});
+document.querySelectorAll('.edit-route-btn').forEach(btn => {
+btn.addEventListener('click', handleStartEditRoute);
+});
+document.querySelectorAll('.finalize-route-btn-card').forEach(btn => {
+btn.addEventListener('click', handleFinalizeRouteFromCard);
+});
+document.querySelectorAll('.delete-route-btn').forEach(btn => {
+btn.addEventListener('click', handleDeleteRoute);
 });
 }
 
-// FIX: Añadir comprobaciones de nulidad
+// Actualizar el panel de detalles de la ruta
 function updateRouteDetails(route) {
-const infoEl = document.getElementById('route-details-info');
+const detailsInfoEl = document.getElementById('route-details-info');
 const assignedTripsEl = document.getElementById('assigned-trips-list');
-const totalEl = document.getElementById('route-total-price');
-const ticketBtn = document.getElementById('view-route-ticket-btn');
-const finalizeBtn = document.getElementById('finalize-route-btn');
-const routeIdDisplayEl = document.getElementById('route-id-display');
-const driverDetailsEl = document.getElementById('route-driver-details');
-const vehicleDetailsEl = document.getElementById('route-vehicle-details');
-const dateDetailsEl = document.getElementById('route-date-details');
+const routeIdDisplay = document.getElementById('route-id-display');
 
-if (!route) {
-if (routeIdDisplayEl) routeIdDisplayEl.textContent = '';
-if (infoEl) infoEl.innerHTML = '<p class="text-center text-gray-500">Selecciona una ruta activa para ver sus detalles.</p>';
-if (assignedTripsEl) assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm">Selecciona una ruta activa para ver los viajes asignados.</p>';
-if (totalEl) totalEl.textContent = '';
-if (ticketBtn) ticketBtn.disabled = true;
-if (finalizeBtn) finalizeBtn.disabled = true;
+// Vaciar detalles si no hay ruta seleccionada
+if (!route || !detailsInfoEl) {
+if (detailsInfoEl) {
+detailsInfoEl.innerHTML = '<p class="text-center text-gray-500">Selecciona una ruta activa para ver sus detalles.</p>';
+}
+if (assignedTripsEl) {
+assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm">Selecciona una ruta activa para ver los viajes asignados.</p>';
+}
+if (routeIdDisplay) routeIdDisplay.textContent = '';
 return;
 }
 
-if (routeIdDisplayEl) routeIdDisplayEl.textContent = `#${route.id.slice(-4)}`;
-if (driverDetailsEl) driverDetailsEl.innerHTML = `<i data-lucide="user-check" class="w-4 h-4 inline-block mr-1 text-primary"></i> Chofer: ${route.driverName} (Tel: ${route.driverPhone})`;
-if (vehicleDetailsEl) vehicleDetailsEl.innerHTML = `<i data-lucide="car-front" class="w-4 h-4 inline-block mr-1 text-accent"></i> Vehículo: ${route.vehicleModel} (${route.vehiclePlate})`;
-if (dateDetailsEl) dateDetailsEl.innerHTML = `<i data-lucide="calendar" class="w-4 h-4 inline-block mr-1 text-gray-500"></i> Fecha: ${route.date}`;
-if (totalEl) totalEl.textContent = `Total Bruto de Ruta: ${formatPrice(route.totalPrice)}`;
+// Rellenar detalles
+detailsInfoEl.innerHTML = `
+<p id="route-driver-details" class="font-medium text-gray-700"><i data-lucide="user-check" class="w-4 h-4 inline-block mr-1 text-primary"></i> Chofer: ${route.driverName} (Tel: ${route.driverPhone})</p>
+<p id="route-vehicle-details" class="text-sm text-gray-600"><i data-lucide="car-front" class="w-4 h-4 inline-block mr-1 text-accent"></i> Vehículo: ${route.vehicleModel} (${route.vehiclePlate})</p>
+<p id="route-date-details" class="text-sm text-gray-500"><i data-lucide="calendar" class="w-4 h-4 inline-block mr-1 text-gray-500"></i> Fecha: ${route.date}</p>
+<p id="route-total-price" class="font-bold text-lg text-green-600 mt-2">Total Bruto de Ruta: ${formatPrice(route.totalPrice)}</p>
+<div id="route-ticket-buttons" class="mt-4 flex space-x-3">
+<button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150 btn-feedback" ${route.trips.length === 0 ? 'disabled' : ''}>
+<i data-lucide="eye" class="w-4 h-4 mr-2"></i> Ver Ticket Chofer
+</button>
+<button id="finalize-route-btn-details" data-id="${route.id}" class="bg-red-500 text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center btn-feedback">
+<i data-lucide="check-circle-2" class="w-4 h-4 mr-2"></i> Finalizar Ruta
+</button>
+</div>
+`;
+if (routeIdDisplay) routeIdDisplay.textContent = `#${route.id.slice(-4)}`;
 
-if (ticketBtn) {
-ticketBtn.disabled = route.trips.length === 0;
-ticketBtn.setAttribute('data-route', JSON.stringify(route));
-}
-if (finalizeBtn) {
-finalizeBtn.disabled = false;
-finalizeBtn.setAttribute('data-id', route.id);
-}
-
-if (assignedTripsEl) {
+// Rellenar tramos asignados
 assignedTripsEl.innerHTML = '';
 if (route.trips.length === 0) {
 assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-4 border border-dashed rounded-lg">Aún no hay tickets asignados a esta ruta.</p>';
@@ -1330,7 +1741,7 @@ assignedTripsEl.innerHTML += `
 <div class="p-3 bg-blue-50 border rounded-lg border-blue-200">
 <div class="flex justify-between items-start">
 <p class="font-semibold text-sm text-blue-700">#${trip.ticketId} - ${trip.clientName}</p>
-<button data-trip-id="${trip.id}" data-route-id="${route.id}" class="remove-trip-from-route-btn text-red-500 hover:text-red-700 transition duration-150">
+<button data-trip-id="${trip.id}" data-route-id="${route.id}" class="remove-trip-from-route-btn text-red-500 hover:text-red-700 transition duration-150 btn-feedback">
 <i data-lucide="x" class="w-4 h-4"></i>
 </button>
 </div>
@@ -1341,48 +1752,50 @@ assignedTripsEl.innerHTML += `
 `;
 });
 }
-}
 
+// Actualizar lista de pendientes y añadir listeners
 renderPendingTripsList();
 lucide.createIcons();
-
-if (assignedTripsEl) {
+// Re-attach listeners for dynamically created buttons inside detailsInfoEl
+detailsInfoEl.querySelector('#view-route-ticket-btn')?.addEventListener('click', handleViewRouteTicket);
+detailsInfoEl.querySelector('#finalize-route-btn-details')?.addEventListener('click', handleFinalizeRouteFromDetails);
 assignedTripsEl.querySelectorAll('.remove-trip-from-route-btn').forEach(btn => {
 btn.addEventListener('click', handleRemoveTripFromRoute);
 });
-}
 }
 
 
 function renderPendingTripsList() {
 const listEl = document.getElementById('pending-trips-list');
-if (!listEl) return; // FIX: Salir si el elemento no existe
+if (!listEl) return;
 
 listEl.innerHTML = '';
-if (document.getElementById('loading-pending-trips')) document.getElementById('loading-pending-trips').remove();
+const loadingEl = document.getElementById('loading-pending-trips');
+if (loadingEl) loadingEl.style.display = 'none';
+
 const availableTrips = allTripsData.filter(t => !t.isAssigned && t.status === 'Activo');
 if (availableTrips.length === 0) {
 listEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay tickets pendientes de asignación.</p>';
 return;
 }
-availableTrips.sort((a, b) => a.time.localeCompare(b.time));
+availableTrips.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)); // Ordenar por fecha y hora
 availableTrips.forEach(trip => {
 let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
 if (trip.petSize && trip.petSize !== 'ninguno') {
 petInfo += ` (${trip.petSize})`;
 }
+const isCurrentRouteSelected = currentRouteData !== null;
+// Añadida Fecha
 listEl.innerHTML += `
-<div class="p-3 bg-gray-50 border rounded-lg border-gray-200">
-<div class="flex justify-between items-center">
+<div class="p-3 bg-gray-50 border rounded-lg border-gray-200 flex justify-between items-center">
 <div>
 <p class="font-semibold text-sm text-gray-700">${trip.clientName}</p>
-<p class="text-xs text-gray-500">${trip.time} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
+<p class="text-xs text-gray-500">${trip.date} - ${trip.time} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
 <p class="text-xs text-gray-500">${petInfo}</p>
 </div>
-<button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150" ${currentRouteData ? '' : 'disabled'}>
+<button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" ${isCurrentRouteSelected ? '' : 'disabled'} title="${isCurrentRouteSelected ? 'Añadir a ruta seleccionada' : 'Selecciona una ruta activa primero'}">
 <i data-lucide="plus" class="w-4 h-4 inline-block mr-1"></i> Añadir
 </button>
-</div>
 </div>
 `;
 });
@@ -1397,18 +1810,31 @@ if (!currentRouteData) { showStatus('Debe seleccionar una ruta activa primero.',
 const tripId = e.currentTarget.getAttribute('data-trip-id');
 const trip = allTripsData.find(t => t.id === tripId);
 if (!trip) return;
+
+// Actualización de precio corregida
+const currentPrice = currentRouteData.totalPrice || 0;
+const newTotalPrice = currentPrice + (trip.price || 0);
 const newTripsArray = [...currentRouteData.trips, tripId];
-const newTotalPrice = (currentRouteData.totalPrice || 0) + (trip.price || 0);
+
 try {
-await updateDoc(doc(db, ROUTES_COLLECTION(), currentRouteData.id), {
-trips: newTripsArray,
-totalPrice: newTotalPrice
-});
-await updateDoc(doc(db, TRIPS_COLLECTION(), tripId), {
-isAssigned: true,
-assignedRouteId: currentRouteData.id
-});
+const routeRef = doc(db, ROUTES_COLLECTION(), currentRouteData.id);
+const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+
+// Usar batch para asegurar atomicidad
+const batch = writeBatch(db);
+batch.update(routeRef, { trips: newTripsArray, totalPrice: newTotalPrice });
+batch.update(tripRef, { isAssigned: true, assignedRouteId: currentRouteData.id });
+await batch.commit();
+
 showStatus(`Ticket ${trip.ticketId} asignado a Ruta #${currentRouteData.id.slice(-4)}`, 'success');
+
+// Actualización UI Inmediata (Opcional, pero mejora la experiencia)
+// Buscar y mover el elemento DOM en lugar de depender solo de onSnapshot
+const tripCard = e.currentTarget.closest('.p-3');
+if (tripCard) tripCard.remove(); // Quitar de pendientes
+// Añadir a asignados visualmente (más complejo, onSnapshot debería bastar)
+// updateRouteDetails(currentRouteData); // Forzar re-renderizado
+
 } catch (error) {
 console.error("Error al asignar viaje a ruta:", error);
 showStatus('Error al asignar viaje a ruta: ' + error.message, 'error');
@@ -1421,19 +1847,30 @@ const tripId = e.currentTarget.getAttribute('data-trip-id');
 const routeId = e.currentTarget.getAttribute('data-route-id');
 const trip = allTripsData.find(t => t.id === tripId);
 if (!trip || trip.assignedRouteId !== routeId) return;
+
+// Actualización de precio corregida
+const currentPrice = currentRouteData.totalPrice || 0;
+const tripPrice = trip.price || 0;
+const newTotalPrice = Math.max(0, currentPrice - tripPrice); // Evitar negativos
 const newTripsArray = currentRouteData.trips.filter(id => id !== tripId);
-const newTotalPrice = (currentRouteData.totalPrice || 0) - (trip.price || 0);
+
 if (prompt(`¿Seguro que deseas desasignar el viaje de ${trip.clientName} de la ruta #${routeId.slice(-4)}? El ticket volverá a estar pendiente. Escribe 'desasignar' para confirmar.`) === 'desasignar') {
 try {
-await updateDoc(doc(db, ROUTES_COLLECTION(), routeId), {
-trips: newTripsArray,
-totalPrice: newTotalPrice
-});
-await updateDoc(doc(db, TRIPS_COLLECTION(), tripId), {
-isAssigned: false,
-assignedRouteId: null
-});
+const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+
+const batch = writeBatch(db);
+batch.update(routeRef, { trips: newTripsArray, totalPrice: newTotalPrice });
+batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+await batch.commit();
+
 showStatus(`Ticket ${trip.ticketId} desasignado y marcado como pendiente.`, 'success');
+
+// Actualización UI Inmediata
+// const tripCard = e.currentTarget.closest('.p-3');
+// if (tripCard) tripCard.remove(); // Quitar de asignados
+// renderPendingTripsList(); // Volver a añadir a pendientes visualmente
+
 } catch (error) {
 console.error("Error al desasignar viaje:", error);
 showStatus('Error al desasignar viaje: ' + error.message, 'error');
@@ -1441,17 +1878,35 @@ showStatus('Error al desasignar viaje: ' + error.message, 'error');
 }
 }
 
-async function handleFinalizeRoute(e) {
-if (!currentRouteData) { showStatus('Selecciona una ruta para finalizar.', 'error'); return; }
-if (prompt(`¿Quieres finalizar la Ruta #${currentRouteData.id.slice(-4)}? Esta acción es irreversible. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
+// Finalizar ruta (desde el panel de detalles)
+async function handleFinalizeRouteFromDetails(e) {
+const routeId = e.currentTarget.getAttribute('data-id');
+const route = allRoutesData.find(r => r.id === routeId);
+if (!route) {
+showStatus('Error: Ruta no encontrada.', 'error');
+return;
+}
+
+if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
 try {
-const routeId = currentRouteData.id;
-await updateDoc(doc(db, ROUTES_COLLECTION(), routeId), {
-status: 'Finalizada',
-finishedAt: serverTimestamp()
+const batch = writeBatch(db);
+
+// 1. Finalizar todos los trips
+route.trips.forEach(tripId => {
+const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+batch.update(tripRef, { status: 'Finalizado' });
 });
-currentRouteData = null;
-updateRouteDetails(null);
+
+// 2. Finalizar la ruta
+const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+batch.update(routeRef, { status: 'Finalizada', finishedAt: serverTimestamp() });
+
+await batch.commit();
+
+if (currentRouteData && currentRouteData.id === routeId) {
+currentRouteData = null; // Deseleccionar la ruta actual
+updateRouteDetails(null); // Limpiar el panel de detalles
+}
 showStatus(`Ruta #${routeId.slice(-4)} finalizada con éxito.`, 'success');
 } catch (error) {
 console.error("Error al finalizar ruta:", error);
@@ -1463,24 +1918,16 @@ showStatus('Error al finalizar ruta: ' + error.message, 'error');
 
 // --- LÓGICA DEL MODAL DE TICKET (MEJORADO CON GEMINI) ---
 
-/**
-* Genera el ticket para el chofer (basado en la RUTA COMPLETA)
-* @param {object} route Los datos de la ruta.
-* @param {object} geminiSummary Un objeto {html, text} del resumen de Gemini.
-*/
 function generateRouteTicket(route, geminiSummary) {
 const routeTrips = allTripsData.filter(t => route.trips.includes(t.id));
 routeTrips.sort((a, b) => a.time.localeCompare(b.time));
-
 let routeDetailsText = '';
 let routeDetailsHtml = '';
-
 routeTrips.forEach((trip, index) => {
 let petInfoText = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
 if (trip.petSize && trip.petSize !== 'ninguno') {
 petInfoText += ` (${trip.petSize})`;
 }
-
 routeDetailsText += `
 *TRAMO ${index + 1}* (Boleto #${trip.ticketId})
 Cliente: ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})
@@ -1491,7 +1938,6 @@ ${petInfoText}
 - Precio Cliente: ${formatPrice(trip.price)}
 ------------------------------------
 `;
-
 routeDetailsHtml += `
 <div class="border-t border-gray-200 pt-3 mt-3">
 <p class="section-title">TRAMO ${index + 1} (Boleto #${trip.ticketId})</p>
@@ -1504,10 +1950,8 @@ routeDetailsHtml += `
 </div>
 `;
 });
-
 const text = `
 *MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})
-
 *DATOS DEL CHOFER Y VEHÍCULO*
 - *Chofer:* ${route.driverName} (DNI: ${route.driverDni})
 - *Teléfono Chofer:* ${route.driverPhone}
@@ -1517,19 +1961,213 @@ const text = `
 *✨ RESUMEN DE RUTA (IA) ✨*
 ${geminiSummary.text}
 ------------------------------------
-
-*PUNTOS DE RECOGIDA Y DESTINO (Ordenado por Hora)*
+*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*
 ${routeDetailsText}
-
 *TOTAL BRUTO DE RUTA:* ${formatPrice(route.totalPrice)}
 ¡Buena ruta!
 `.trim();
-
 const html = `
 <div class="printable-ticket">
 <h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4>
 <p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p>
 <p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p>
 <p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p>
-<p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p
+<p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p>
+${geminiSummary.html}
+<div class="mt-4">
+<p class="section-title">Tramos Asignados</p>
+${routeDetailsHtml}
+</div>
+<div class="border-t border-gray-300 pt-3 mt-4">
+<p class="text-lg font-bold">TOTAL BRUTO RUTA: ${formatPrice(route.totalPrice)}</p>
+</div>
+</div>
+`.trim();
+return { html, text };
+}
+
+function generateClientTicket(trip, routeData = null) {
+let driverInfoText = "Este ticket está PENDIENTE de asignación de ruta/chofer. La confirmación final se enviará con los datos del chofer y vehículo.";
+let driverInfoHtml = `<p class="pending">PENDIENTE DE ASIGNACIÓN de ruta/chofer. La confirmación final se enviará con los datos del chofer y vehículo.</p>`;
+if (routeData) {
+driverInfoText = `
+*DATOS DEL MÓVIL ASIGNADO:*
+- *Chofer:* ${routeData.driverName}
+- *Teléfono Chofer:* ${routeData.driverPhone}
+- *Vehículo:* ${routeData.vehicleModel} ${routeData.vehicleColor}
+- *Patente:* ${routeData.vehiclePlate}
+- *Ruta Asignada:* #${routeData.id.slice(-4)}
+`.trim();
+driverInfoHtml = `
+<p><strong>Chofer:</strong> ${routeData.driverName}</p>
+<p><strong>Teléfono Chofer:</strong> ${routeData.driverPhone}</p>
+<p><strong>Vehículo:</strong> ${routeData.vehicleModel} ${routeData.vehicleColor} (${routeData.vehiclePlate})</p>
+`.trim();
+}
+let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
+if (trip.petSize && trip.petSize !== 'ninguno') {
+petInfo += ` (${trip.petSize})`;
+}
+const text = `
+¡Confirmación de Viaje con MG Transporte! 🚗 Puerta a Puerta 🚪
+Hola ${trip.clientName}, tu viaje ha sido registrado (Ticket #${trip.ticketId}).
+*DETALLES DE TU VIAJE:*
+- *Fecha:* ${trip.date}
+- *Horario Aprox. Recogida:* ${trip.time}
+- *Info:* ${petInfo}
+- *Punto de Recogida:* ${trip.addressOrigin}, ${trip.localityOrigin}
+- *Destino final:* ${trip.addressDest}, ${trip.localityDest}
+- *Precio final:* ${formatPrice(trip.price)}
+${driverInfoText}
+El chofer te contactará al llegar al punto de recogida.
+¡Gracias por elegir MG Transporte!
+`.trim();
+const html = `
+<div class="printable-ticket">
+<h4><i data-lucide="ticket" class="icon"></i>Confirmación de Viaje (Ticket #${trip.ticketId})</h4>
+<p class="section-title">Pasajero</p>
+<p><strong>Nombre:</strong> ${trip.clientName}</p>
+<p><strong>Teléfono:</strong> ${trip.clientPhone || 'N/A'}</p>
+<p class="section-title mt-4">Detalles del Viaje</p>
+<p><strong>Fecha:</strong> ${trip.date}</p>
+<p><strong>Hora Aprox:</strong> ${trip.time}</p>
+<p><strong>Info:</strong> ${petInfo}</p>
+<p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p>
+<p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p>
+<p class="highlight">Precio Final: ${formatPrice(trip.price)}</p>
+<p class="section-title mt-4">Datos del Chofer Asignado</p>
+${driverInfoHtml}
+</div>
+`.trim();
+return { html, text };
+}
+
+async function showClientTicketModal(tripData) {
+const routeData = tripData.assignedRouteId ?
+allRoutesData.find(r => r.id === tripData.assignedRouteId) :
+null;
+modalTicketData.client = generateClientTicket(tripData, routeData);
+if (routeData) {
+const routeTrips = allTripsData.filter(t => routeData.trips.includes(t.id));
+const geminiSummary = await getGeminiDriverSummary(routeData, routeTrips);
+modalTicketData.driver = generateRouteTicket(routeData, geminiSummary);
+} else {
+modalTicketData.driver = {
+html: '<p class="p-4 text-center text-gray-600">Este ticket está pendiente de asignación de ruta.</p>',
+text: 'Ticket pendiente de asignación de ruta.'
+};
+}
+document.getElementById('modal-content-client').innerHTML = modalTicketData.client.html;
+document.getElementById('modal-content-driver').innerHTML = modalTicketData.driver.html;
+document.getElementById('modal-tab-client').classList.add('active');
+document.getElementById('modal-tab-driver').classList.remove('active');
+document.getElementById('modal-content-client').classList.remove('hidden');
+document.getElementById('modal-content-driver').classList.add('hidden');
+document.getElementById('modal-tab-driver').textContent = routeData ? 'Ticket Ruta' : 'Ticket Chofer (Pendiente)';
+document.getElementById('ticket-modal').dataset.activeTab = 'client';
+document.getElementById('ticket-modal').classList.remove('hidden');
+lucide.createIcons();
+}
+
+async function handleViewRouteTicket(e) {
+if (!currentRouteData) { return; }
+const button = e.currentTarget;
+const originalHtml = button.innerHTML; // Guardar HTML original
+button.innerHTML = `
+<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+</svg>
+Generando...`;
+button.disabled = true;
+try {
+const routeTrips = allTripsData.filter(t => currentRouteData.trips.includes(t.id));
+const geminiSummary = await getGeminiDriverSummary(currentRouteData, routeTrips);
+modalTicketData.driver = generateRouteTicket(currentRouteData, geminiSummary);
+modalTicketData.client = {
+html: '<p class="p-4 text-center text-gray-600">Use la pestaña "Tickets" para el ticket de cliente individual.</p>',
+text: 'Ticket de cliente no disponible en esta vista.'
+};
+document.getElementById('modal-content-client').innerHTML = modalTicketData.client.html;
+document.getElementById('modal-content-driver').innerHTML = modalTicketData.driver.html;
+document.getElementById('modal-tab-client').classList.remove('active');
+document.getElementById('modal-tab-driver').classList.add('active');
+document.getElementById('modal-content-client').classList.add('hidden');
+document.getElementById('modal-content-driver').classList.remove('hidden');
+document.getElementById('modal-tab-driver').textContent = 'Ticket Ruta';
+document.getElementById('ticket-modal').dataset.activeTab = 'driver';
+document.getElementById('ticket-modal').classList.remove('hidden');
+lucide.createIcons();
+} catch (error) {
+console.error("Error al generar ticket de ruta:", error);
+showStatus("Error al generar el resumen de IA.", "error");
+} finally {
+button.innerHTML = originalHtml; // Restaurar HTML original
+button.disabled = false;
+lucide.createIcons();
+}
+}
+
+// --- Manejadores del Modal (Cerrar, Pestañas, Acciones) ---
+document.getElementById('close-modal-btn').addEventListener('click', () => {
+document.getElementById('ticket-modal').classList.add('hidden');
+});
+document.getElementById('modal-tab-client').addEventListener('click', (e) => {
+document.querySelectorAll('#ticket-modal .modal-tab-button').forEach(btn => btn.classList.remove('active'));
+e.currentTarget.classList.add('active');
+document.getElementById('modal-content-client').classList.remove('hidden');
+document.getElementById('modal-content-driver').classList.add('hidden');
+document.getElementById('ticket-modal').dataset.activeTab = 'client';
+});
+document.getElementById('modal-tab-driver').addEventListener('click', (e) => {
+document.querySelectorAll('#ticket-modal .modal-tab-button').forEach(btn => btn.classList.remove('active'));
+e.currentTarget.classList.add('active');
+document.getElementById('modal-content-driver').classList.remove('hidden');
+document.getElementById('modal-content-client').classList.add('hidden');
+document.getElementById('ticket-modal').dataset.activeTab = 'driver';
+});
+function getActiveTicketText() {
+const activeTab = document.getElementById('ticket-modal').dataset.activeTab || 'client';
+return modalTicketData[activeTab].text;
+}
+document.getElementById('print-ticket-btn').addEventListener('click', () => {
+window.print();
+});
+document.getElementById('copy-message-btn').addEventListener('click', () => {
+const textToCopy = getActiveTicketText();
+try {
+const textArea = document.createElement("textarea");
+textArea.value = textToCopy;
+textArea.style.position = "fixed"; textArea.style.left = "-9999px"; // Ocultarlo bien
+textArea.style.opacity = 0;
+document.body.appendChild(textArea);
+textArea.focus();
+textArea.select();
+document.execCommand('copy');
+showStatus('Texto del ticket copiado al portapapeles.', 'success');
+document.body.removeChild(textArea);
+} catch (err) {
+console.error('Error al copiar texto: ', err);
+showStatus('Error al copiar texto.', 'error');
+}
+});
+document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
+const text = getActiveTicketText();
+const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+window.open(whatsappUrl, '_blank');
+});
+document.getElementById('share-email-btn').addEventListener('click', () => {
+const text = getActiveTicketText();
+const subject = "Confirmación de Viaje - MG Transporte";
+const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+window.open(mailtoUrl, '_blank');
+});
+
+// --- INICIO ---
+setupTabs();
+lucide.createIcons();
+
+</script>
+</body>
+</html>
 
