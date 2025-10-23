@@ -166,39 +166,55 @@ stroke: #725a03;
 /* CORREGIDO: Ocultar elementos en la impresión */
 @media print {
   /* Ocultar todo por defecto */
-  body * {
+  body, body * {
     visibility: hidden;
   }
-  /* Hacer visible solo el área de impresión y sus hijos */
-  #printable-area, #printable-area * {
-    visibility: visible;
-  }
-  /* Mover el área de impresión al inicio de la página */
+  
+  /* Definir el área imprimible */
   #printable-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 10px;
-    border: none;
-    box-shadow: none;
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
     max-height: none !important;
     overflow: visible !important;
   }
-  /* Ocultar elementos específicos que podrían interferir */
-  #login-container, #app > header, #app > .flex.border-b, .modal-actions-no-print, #close-modal-btn, #ticket-modal .flex.border-b {
-    display: none !important;
+  
+  /* Hacer visibles solo los hijos del área imprimible */
+  #printable-area * {
+    visibility: visible !important;
   }
-  /* Asegurar que el ticket imprimible tenga fondo blanco */
+  
+  /* Ocultar la pestaña inactiva DENTRO del área imprimible */
+  #printable-area .modal-tab-content.hidden {
+      display: none !important;
+  }
+
+  /* Asegurar que el ticket ocupe el espacio */
   .printable-ticket {
     background-color: #ffffff !important;
     border: 1px solid #ccc !important;
     box-shadow: none !important;
+    page-break-inside: avoid; /* Evitar que se corte el ticket */
   }
+  
   .gemini-summary {
     background-color: #ffffff !important;
     border: 1px solid #eee !important;
+    page-break-inside: avoid;
+  }
+
+  /* Ocultar explícitamente otros elementos de la UI */
+  #login-container, #app > header, #app > .flex.border-b, 
+  .modal-actions-no-print, #close-modal-btn, 
+  #ticket-modal .flex.border-b {
+    display: none !important;
+    visibility: hidden !important;
   }
 }
 </style>
@@ -1685,6 +1701,7 @@ function handleCancelRouteEdit() {
     lucide.createIcons();
 }
 function handleStartEditRoute(e) {
+    e.stopPropagation(); // Evitar que se seleccione la tarjeta
     const routeData = JSON.parse(e.currentTarget.getAttribute('data-route'));
     window.scrollTo(0, 0);
 
@@ -1699,6 +1716,7 @@ function handleStartEditRoute(e) {
     lucide.createIcons();
 }
 async function handleFinalizeRouteFromCard(e) {
+    e.stopPropagation(); // Evitar que se seleccione la tarjeta
     const routeId = e.currentTarget.getAttribute('data-id');
     const route = allRoutesData.find(r => r.id === routeId);
     if (!route) return;
@@ -1729,6 +1747,7 @@ async function handleFinalizeRouteFromCard(e) {
     }
 }
 async function handleDeleteRoute(e) {
+    e.stopPropagation(); // Evitar que se seleccione la tarjeta
     const routeId = e.currentTarget.getAttribute('data-id');
     const route = allRoutesData.find(r => r.id === routeId);
     if (!route) return;
@@ -1775,7 +1794,6 @@ function renderRouteLists(routes) {
         activeRoutes.forEach(route => {
             const tripCount = route.trips?.length || 0;
             const total = formatPrice(route.totalPrice);
-            // CORREGIDO: Añadir clase 'route-selected' si es la ruta actual
             const isSelected = currentRouteData && currentRouteData.id === route.id ? 'route-selected' : '';
             activeListEl.innerHTML += `
             <div class="p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card ${isSelected} cursor-pointer" data-id="${route.id}">
@@ -1849,7 +1867,7 @@ function renderRouteLists(routes) {
 // Función separada para manejar el clic en la TARJETA de ruta
 function handleSelectRoute(e) {
     // Evitar que el clic en los botones (editar, borrar) también seleccione la ruta
-    if (e.target.closest('button')) return; 
+    if (e.target.closest('button.btn-feedback')) return; 
 
     const card = e.currentTarget;
     const routeId = card.getAttribute('data-id');
