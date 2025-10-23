@@ -212,11 +212,16 @@ overflow: visible !important;
 <body class="min-h-screen">
 
 <div id="app" class="max-w-5xl mx-auto p-4 md:p-8">
-<header class="text-center mb-6">
+<header class="text-center mb-6 flex flex-col items-center">
+<!-- Contenedor del Logo -->
+<div class="mb-2">
+<div class="flex items-center justify-center h-12 w-12 mx-auto rounded-full bg-primary text-white text-lg font-bold">
+MG
+</div>
+</div>
+
 <h1 class="text-3xl font-bold text-gray-800 flex items-center justify-center">
-<span class="color-primary">MG</span>
-<i data-lucide="route" class="w-7 h-7 ml-1 mr-2 color-accent"></i>
-<span class="color-primary">Transporte</span>
+<span class="color-primary">MG Transporte</span>
 </h1>
 <p class="text-sm text-gray-500 mt-1">Sistema de Viajes Puerta a Puerta</p>
 </header>
@@ -597,14 +602,28 @@ Detalle de Ruta <span id="route-id-display" class="text-sm text-gray-500 font-mo
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, onSnapshot, collection, query, where, updateDoc, serverTimestamp, deleteDoc, setLogLevel, getDocs, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// No necesitamos getAnalytics aquí, lo quitamos para simplificar
+// import { getAnalytics } from "firebase/analytics";
 
 // Establecer nivel de log para depuración de Firestore
 setLogLevel('debug');
 
-// --- Variables Globales de Firebase (PROPORCIONADAS POR EL ENTORNO) ---
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+// --- Variables Globales de Firebase ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Usar appId global si está disponible
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // Usar token global si está disponible
+
+// Your web app's Firebase configuration (FROM USER INPUT)
+// **VERIFICAR QUE ESTOS DATOS SEAN EXACTAMENTE IGUALES A LOS DE TU CONSOLA FIREBASE**
+const firebaseConfig = {
+  apiKey: "AIzaSyCSCWBt9f9k4bclDItYGpgAzSuPY0Thu1s",
+  authDomain: "mgtrasporte-44118.firebaseapp.com",
+  projectId: "mgtrasporte-44118",
+  storageBucket: "mgtrasporte-44118.appspot.com", // Usar .appspot.com por compatibilidad
+  messagingSenderId: "181650909603",
+  appId: "1:181650909603:web:ebeeb08a1daa60b00d5216",
+  measurementId: "G-PL94Y29T4X"
+};
+
 
 let db, auth, userId;
 let driversData = []; // Caché para choferes
@@ -707,7 +726,7 @@ document.getElementById('sub-tab-rutas-finalizadas').classList.add('active');
 
 
 // --- INICIALIZACIÓN Y AUTENTICACIÓN DE FIREBASE ---
-if (firebaseConfig) {
+if (firebaseConfig && firebaseConfig.apiKey) { // Verificación básica de que la config existe
 try {
 const app = initializeApp(firebaseConfig);
 db = getFirestore(app);
@@ -717,62 +736,89 @@ authStatusEl.textContent = 'Autenticando usuario...';
 onAuthStateChanged(auth, async (user) => {
 if (user) {
 userId = user.uid;
-authStatusEl.textContent = `✅ Conectado | ID de Usuario: ${userId}`;
+authStatusEl.textContent = `✅ Conectado | ID de Usuario: ${userId.slice(0,8)}...`; // Acortar ID visualmente
 listenForVehicles();
 listenForDrivers();
-listenForCustomers(); // NUEVO
+listenForCustomers();
 listenForTrips();
 listenForRoutes();
-setupRouteAssignmentLogic(); // Llamar después de que los listeners estén listos
+setupRouteAssignmentLogic();
 } else {
-if (initialAuthToken) {
-await signInWithCustomToken(auth, initialAuthToken);
-} else {
-await signInAnonymously(auth);
+// Intentar autenticar (anónimo o con token)
+try {
+  // Siempre intentar anónimo si no hay token (simplificado)
+  if (initialAuthToken) {
+     console.log("Intentando iniciar sesión con token...");
+     await signInWithCustomToken(auth, initialAuthToken);
+  } else {
+     console.log("Intentando iniciar sesión anónimamente...");
+     await signInAnonymously(auth);
+  }
+} catch (authError) {
+   console.error("Error durante el signIn:", authError);
+   // Mostrar error específico de Firebase si está disponible
+   let errorMessage = authError.message;
+   if (authError.code === 'auth/invalid-custom-token' && initialAuthToken) {
+       errorMessage = "Token de autenticación inválido o expirado.";
+   } else if (authError.code === 'auth/configuration-not-found') {
+       errorMessage = "Configuración de Firebase no encontrada o incorrecta. Verifica los datos en el código.";
+   }
+   authStatusEl.textContent = `❌ Error de autenticación: ${authError.code || 'Desconocido'}`;
+   showStatus(`Error de autenticación: ${errorMessage}`, 'error');
 }
 }
 });
 } catch (error) {
 console.error("Error al inicializar Firebase:", error);
-authStatusEl.textContent = `❌ Error de conexión. Revisa la consola.`;
+authStatusEl.textContent = `❌ Error de inicialización. Revisa la consola.`;
 showStatus('Error al conectar con la base de datos.', 'error');
 }
 } else {
-authStatusEl.textContent = '❌ Configuración de Firebase faltante.';
-showStatus('Falta la configuración de Firebase para la persistencia de datos.', 'error');
+authStatusEl.textContent = '❌ Configuración de Firebase inválida o faltante.';
+showStatus('La configuración de Firebase es inválida o no se encontró.', 'error');
 }
 
 
 // --- COLECCIONES ---
-const VEHICLES_COLLECTION = () => `artifacts/${appId}/users/${userId}/vehicles`;
-const DRIVERS_COLLECTION = () => `artifacts/${appId}/users/${userId}/drivers`;
-const CUSTOMERS_COLLECTION = () => `artifacts/${appId}/users/${userId}/customers`; // NUEVO
-const TRIPS_COLLECTION = () => `artifacts/${appId}/users/${userId}/trips`;
-const ROUTES_COLLECTION = () => `artifacts/${appId}/users/${userId}/routes`;
+// Asegurarse que userId esté definido antes de usar estas funciones
+// Usar ruta 'public' para datos compartidos si es necesario, o 'users/{userId}' para privados
+const baseCollectionPath = () => userId ? `artifacts/${appId}/users/${userId}` : null; // Ruta base para datos privados
+
+const VEHICLES_COLLECTION = () => userId ? `${baseCollectionPath()}/vehicles` : null;
+const DRIVERS_COLLECTION = () => userId ? `${baseCollectionPath()}/drivers` : null;
+const CUSTOMERS_COLLECTION = () => userId ? `${baseCollectionPath()}/customers` : null;
+const TRIPS_COLLECTION = () => userId ? `${baseCollectionPath()}/trips` : null;
+const ROUTES_COLLECTION = () => userId ? `${baseCollectionPath()}/routes` : null;
+
 
 // --- SECCIÓN DE GEMINI API ---
 async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
 try {
 const response = await fetch(url, options);
 if (!response.ok) {
-if (response.status === 429 && retries > 0) {
+if (response.status === 429 && retries > 0) { // Too Many Requests
+console.warn(`Throttled by API. Retrying in ${delay / 1000}s... (${retries} retries left)`);
 await new Promise(resolve => setTimeout(resolve, delay));
-return fetchWithBackoff(url, options, retries - 1, delay * 2);
+return fetchWithBackoff(url, options, retries - 1, delay * 2); // Exponential backoff
 }
+// Handle other errors (like 400 Bad Request, 500 Internal Server Error)
+console.error(`HTTP error! status: ${response.status}`, await response.text());
 throw new Error(`HTTP error! status: ${response.status}`);
 }
 return response.json();
 } catch (error) {
+console.error(`Fetch error: ${error.message}. Retrying in ${delay / 1000}s... (${retries} retries left)`);
 if (retries > 0) {
 await new Promise(resolve => setTimeout(resolve, delay));
 return fetchWithBackoff(url, options, retries - 1, delay * 2);
 }
-throw error;
+console.error("Fetch failed after multiple retries:", error); // Log final error
+throw error; // Re-throw error after retries fail
 }
 }
 
 async function callGemini(userPrompt, systemPrompt = "") {
-const apiKey = "";
+const apiKey = ""; // API key is handled by the environment
 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 const payload = {
 contents: [{ parts: [{ text: userPrompt }] }],
@@ -783,22 +829,28 @@ parts: [{ text: systemPrompt }]
 };
 }
 try {
+console.log("Calling Gemini API..."); // Log API call start
 const result = await fetchWithBackoff(apiUrl, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(payload)
 });
+console.log("Gemini API response received:", result); // Log API response
 const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
 if (text) {
 return text;
 } else {
-return "No se pudo generar el resumen.";
+console.warn("Respuesta de Gemini vacía o inesperada:", result);
+// Intentar extraer texto de error si existe
+const errorDetails = result?.promptFeedback?.blockReason?.toString() || result?.error?.message || 'Respuesta inesperada';
+return `No se pudo generar el resumen (${errorDetails}).`;
 }
 } catch (error) {
 console.error("Error llamando a la API de Gemini:", error);
-return "Error al contactar la IA.";
+return `Error al contactar la IA: ${error.message}`;
 }
 }
+
 
 async function getGeminiDriverSummary(route, routeTrips) {
 const systemPrompt = "Sos un asistente de logística para 'MG Transporte' en Argentina. Tu tono es amigable, profesional y usás 'vos' en lugar de 'tú'. Generá un resumen corto y útil para el chofer. NO uses markdown, solo texto plano y viñetas con '*' o '-'.";
@@ -828,20 +880,31 @@ Cosas a destacar (si existen):
 Empezá con "¡Hola ${route.driverName}! Acá tenés un resumen rápido de tu ruta:"
 `;
 let summaryText = await callGemini(userPrompt, systemPrompt);
+
+// Sanitize summary text before inserting as HTML
+const sanitizedSummary = summaryText
+    .replace(/</g, "&lt;") // Escape HTML tags
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, '<br>') // Convert newlines to <br>
+    .replace(/\* /g, '&#8226; ') // Convert markdown list items
+    .replace(/- /g, '&#8226; ');
+
 const summaryHtml = `
 <div class="gemini-summary">
 <p class="gemini-summary-title">
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
 Resumen del Chofer (IA)
 </p>
-${summaryText.replace(/\n/g, '<br>').replace(/\* /g, '&#8226; ').replace(/- /g, '&#8226; ')}
+<p>${sanitizedSummary}</p> <!-- Use the sanitized content -->
 </div>
 `;
+// For plain text, keep original formatting slightly modified
 const summaryPlainText = summaryText
-.replace(/<br>/g, '\n')
-.replace(/&#8226;/g, '*');
+.replace(/&#8226;/g, '*'); // Use '*' for lists if needed in plain text
+
 return { html: summaryHtml, text: summaryPlainText };
 }
+
 
 // --- FIN SECCIÓN GEMINI ---
 
@@ -849,6 +912,9 @@ return { html: summaryHtml, text: summaryPlainText };
 document.getElementById('vehicle-form').addEventListener('submit', async (e) => {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
+const collectionPath = VEHICLES_COLLECTION();
+if (!collectionPath) return; // Salir si userId no está listo
+
 const vehicleData = {
 model: document.getElementById('vehicle-model').value.trim(),
 color: document.getElementById('vehicle-color').value.trim(),
@@ -856,7 +922,7 @@ plate: document.getElementById('vehicle-plate').value.trim(),
 createdAt: serverTimestamp()
 };
 try {
-await addDoc(collection(db, VEHICLES_COLLECTION()), vehicleData);
+await addDoc(collection(db, collectionPath), vehicleData);
 showStatus(`Vehículo ${vehicleData.model} (${vehicleData.plate}) guardado.`);
 document.getElementById('vehicle-form').reset();
 } catch (error) {
@@ -866,7 +932,11 @@ showStatus('Error al guardar el vehículo: ' + error.message, 'error');
 });
 
 function listenForVehicles() {
-const q = collection(db, VEHICLES_COLLECTION());
+if (!userId) return; // Asegurar que userId exista
+const collectionPath = VEHICLES_COLLECTION();
+if (!collectionPath) return;
+
+const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
 vehiclesData = [];
 const listEl = document.getElementById('vehicles-list');
@@ -901,16 +971,20 @@ btn.addEventListener('click', handleDeleteVehicle);
 });
 }, (error) => {
 console.error("Error en el oyente de vehículos:", error);
-listEl.innerHTML = 'Error al cargar vehículos.';
+const listEl = document.getElementById('vehicles-list');
+if(listEl) listEl.innerHTML = 'Error al cargar vehículos.';
 });
 }
 
 async function handleDeleteVehicle(e) {
 const vehicleId = e.currentTarget.getAttribute('data-id');
 const vehiclePlate = e.currentTarget.getAttribute('data-plate');
+const collectionPath = VEHICLES_COLLECTION();
+if (!collectionPath) return;
+
 if (prompt(`¿Seguro que deseas eliminar el vehículo ${vehiclePlate}? Escribe 'eliminar' para confirmar.`) === 'eliminar') {
 try {
-await deleteDoc(doc(db, VEHICLES_COLLECTION(), vehicleId));
+await deleteDoc(doc(db, collectionPath, vehicleId));
 showStatus(`Vehículo ${vehiclePlate} eliminado.`);
 } catch (error) {
 console.error("Error al eliminar vehículo:", error);
@@ -923,6 +997,9 @@ showStatus('Error al eliminar vehículo: ' + error.message, 'error');
 document.getElementById('driver-form').addEventListener('submit', async (e) => {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
+const collectionPath = DRIVERS_COLLECTION();
+if (!collectionPath) return;
+
 const driverData = {
 name: document.getElementById('driver-name').value.trim(),
 dni: document.getElementById('driver-dni').value.trim(),
@@ -930,7 +1007,7 @@ phone: document.getElementById('driver-phone').value.trim(),
 createdAt: serverTimestamp()
 };
 try {
-await addDoc(collection(db, DRIVERS_COLLECTION()), driverData);
+await addDoc(collection(db, collectionPath), driverData);
 showStatus(`Chofer ${driverData.name} guardado.`);
 document.getElementById('driver-form').reset();
 } catch (error) {
@@ -940,7 +1017,11 @@ showStatus('Error al guardar el chofer: ' + error.message, 'error');
 });
 
 function listenForDrivers() {
-const q = collection(db, DRIVERS_COLLECTION());
+if (!userId) return;
+const collectionPath = DRIVERS_COLLECTION();
+if (!collectionPath) return;
+
+const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
 driversData = [];
 const listEl = document.getElementById('drivers-list');
@@ -975,16 +1056,20 @@ btn.addEventListener('click', handleDeleteDriver);
 });
 }, (error) => {
 console.error("Error en oyente de choferes:", error);
-listEl.innerHTML = 'Error al cargar choferes.';
+const listEl = document.getElementById('drivers-list');
+if(listEl) listEl.innerHTML = 'Error al cargar choferes.';
 });
 }
 
 async function handleDeleteDriver(e) {
 const driverId = e.currentTarget.getAttribute('data-id');
 const driverName = e.currentTarget.getAttribute('data-name');
+const collectionPath = DRIVERS_COLLECTION();
+if (!collectionPath) return;
+
 if (prompt(`¿Seguro que deseas eliminar al chofer ${driverName}? Escribe 'eliminar' para confirmar.`) === 'eliminar') {
 try {
-await deleteDoc(doc(db, DRIVERS_COLLECTION(), driverId));
+await deleteDoc(doc(db, collectionPath, driverId));
 showStatus(`Chofer ${driverName} eliminado.`);
 } catch (error) {
 console.error("Error al eliminar chofer:", error);
@@ -995,15 +1080,19 @@ showStatus('Error al eliminar chofer: ' + error.message, 'error');
 
 // --- LÓGICA DE CLIENTES (NUEVA) ---
 
-// Escuchar clientes y manejar búsqueda
 function listenForCustomers() {
-const q = collection(db, CUSTOMERS_COLLECTION());
+if (!userId) return;
+const collectionPath = CUSTOMERS_COLLECTION();
+if (!collectionPath) return;
+
+const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
 customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 renderCustomersList(customersData);
 }, (error) => {
 console.error("Error en oyente de clientes:", error);
-document.getElementById('customers-list').innerHTML = 'Error al cargar clientes.';
+const listEl = document.getElementById('customers-list');
+if (listEl) listEl.innerHTML = 'Error al cargar clientes.';
 });
 
 // Filtro de búsqueda
@@ -1011,15 +1100,15 @@ document.getElementById('customer-search').addEventListener('input', (e) => {
 const searchTerm = e.target.value.toLowerCase();
 const filteredCustomers = customersData.filter(cust =>
 cust.name.toLowerCase().includes(searchTerm) ||
-cust.phone.toLowerCase().includes(searchTerm)
+(cust.phone && cust.phone.toLowerCase().includes(searchTerm))
 );
 renderCustomersList(filteredCustomers);
 });
 }
 
-// Renderizar lista de clientes
 function renderCustomersList(customers) {
 const listEl = document.getElementById('customers-list');
+if(!listEl) return;
 listEl.innerHTML = '';
 if (document.getElementById('loading-customers')) {
 document.getElementById('loading-customers').remove();
@@ -1034,7 +1123,7 @@ customers.forEach(data => {
 let addressesHtml = '<p class="text-xs text-gray-500">Sin direcciones guardadas.</p>';
 if (data.addresses && data.addresses.length > 0) {
 addressesHtml = data.addresses.map(addr =>
-`<li class="text-xs text-gray-600 bg-gray-100 p-1 rounded">${addr.address}, ${addr.locality}</li>`
+`<li class="text-xs text-gray-600 bg-gray-100 p-1 rounded">${addr.address || ''}, ${addr.locality || ''}</li>` // Added checks for undefined
 ).join('');
 addressesHtml = `<ul class="space-y-1 mt-2">${addressesHtml}</ul>`;
 }
@@ -1043,10 +1132,10 @@ listEl.innerHTML += `
 <div class="p-4 bg-gray-50 rounded-lg border border-l-4 border-accent">
 <div class="flex justify-between items-center">
 <div>
-<p class="font-semibold text-gray-800">${data.name}</p>
-<p class="text-sm text-gray-500"><i data-lucide="phone" class="w-3 h-3 inline-block mr-1"></i> ${data.phone}</p>
+<p class="font-semibold text-gray-800">${data.name || 'Sin Nombre'}</p>
+<p class="text-sm text-gray-500"><i data-lucide="phone" class="w-3 h-3 inline-block mr-1"></i> ${data.phone || 'N/A'}</p>
 </div>
-<button data-id="${data.id}" data-name="${data.name}" class="delete-customer-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
+<button data-id="${data.id}" data-name="${data.name || 'este cliente'}" class="delete-customer-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
 <i data-lucide="trash-2" class="w-5 h-5"></i>
 </button>
 </div>
@@ -1064,8 +1153,11 @@ btn.addEventListener('click', handleDeleteCustomer);
 });
 }
 
-// Guardar o actualizar cliente (llamado desde el submit de viaje)
 async function saveOrUpdateCustomer(tripData) {
+if (!userId) return;
+const collectionPath = CUSTOMERS_COLLECTION();
+if (!collectionPath) return;
+
 if (!tripData.clientPhone || tripData.clientPhone.trim() === '') {
 console.warn("No se guardó el cliente porque falta el teléfono.");
 return; // No guardar si no hay teléfono
@@ -1076,12 +1168,13 @@ address: tripData.addressOrigin,
 locality: tripData.localityOrigin
 };
 
-const q = query(collection(db, CUSTOMERS_COLLECTION()), where("phone", "==", tripData.clientPhone));
+const q = query(collection(db, collectionPath), where("phone", "==", tripData.clientPhone));
+try {
 const querySnapshot = await getDocs(q);
 
 if (querySnapshot.empty) {
 // Cliente nuevo
-await addDoc(collection(db, CUSTOMERS_COLLECTION()), {
+await addDoc(collection(db, collectionPath), {
 name: tripData.clientName,
 phone: tripData.clientPhone,
 addresses: [newAddress], // Guardar primera dirección
@@ -1097,27 +1190,40 @@ const addressExists = customerData.addresses?.some(addr =>
 addr.address === newAddress.address && addr.locality === newAddress.locality
 ) || false;
 
-if (!addressExists) {
-await updateDoc(customerDoc.ref, {
-name: tripData.clientName, // Actualizar nombre por si cambia
-addresses: arrayUnion(newAddress) // Añadir nueva dirección al array
-});
-} else {
-// Si la dirección ya existe, al menos actualizamos el nombre si cambió
+let updates = {};
+let needsUpdate = false;
+
+// Actualizar nombre si es diferente
 if (customerData.name !== tripData.clientName) {
-await updateDoc(customerDoc.ref, { name: tripData.clientName });
+updates.name = tripData.clientName;
+needsUpdate = true;
+}
+
+// Añadir dirección si no existe
+if (!addressExists) {
+updates.addresses = arrayUnion(newAddress);
+needsUpdate = true;
+}
+
+if (needsUpdate) {
+await updateDoc(customerDoc.ref, updates);
 }
 }
+} catch (error) {
+console.error("Error al guardar/actualizar cliente:", error);
+showStatus("Error al guardar datos del cliente.", "error");
 }
 }
 
-// Borrar cliente
 async function handleDeleteCustomer(e) {
 const customerId = e.currentTarget.getAttribute('data-id');
 const customerName = e.currentTarget.getAttribute('data-name');
+const collectionPath = CUSTOMERS_COLLECTION();
+if (!collectionPath) return;
+
 if (prompt(`¿Seguro que deseas eliminar al cliente ${customerName}? Esta acción es permanente. Escribe 'eliminar' para confirmar.`) === 'eliminar') {
 try {
-await deleteDoc(doc(db, CUSTOMERS_COLLECTION(), customerId));
+await deleteDoc(doc(db, collectionPath, customerId));
 showStatus(`Cliente ${customerName} eliminado.`);
 } catch (error) {
 console.error("Error al eliminar cliente:", error);
@@ -1129,10 +1235,11 @@ showStatus('Error al eliminar cliente: ' + error.message, 'error');
 
 // --- LÓGICA DE VIAJES (Tickets) ---
 
-// Manejador del formulario (Crear y Editar)
 document.getElementById('trip-form').addEventListener('submit', async (e) => {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
+const collectionPath = TRIPS_COLLECTION();
+if (!collectionPath) return;
 
 const tripData = {
 clientName: document.getElementById('client-name').value.trim(),
@@ -1161,11 +1268,11 @@ return;
 
 
 try {
-// Guardar cliente (NUEVO)
+// Guardar cliente
 await saveOrUpdateCustomer(tripData);
 
 if (currentlyEditingTripId) {
-const tripRef = doc(db, TRIPS_COLLECTION(), currentlyEditingTripId);
+const tripRef = doc(db, collectionPath, currentlyEditingTripId);
 await updateDoc(tripRef, tripData);
 showStatus(`Ticket de ${tripData.clientName} actualizado.`, 'success');
 } else {
@@ -1175,7 +1282,7 @@ tripData.status = 'Activo';
 tripData.createdAt = serverTimestamp();
 tripData.ticketId = Math.random().toString(36).substring(2, 9).toUpperCase();
 
-await addDoc(collection(db, TRIPS_COLLECTION()), tripData);
+await addDoc(collection(db, collectionPath), tripData);
 showStatus(`Ticket #${tripData.ticketId} para ${tripData.clientName} registrado.`, 'success');
 await showClientTicketModal(tripData); // Mostrar modal al crear
 }
@@ -1225,18 +1332,20 @@ async function handleFinalizeTrip(e) {
 const button = e.currentTarget;
 const tripId = button.getAttribute('data-id');
 const clientName = button.getAttribute('data-client');
+const collectionPath = TRIPS_COLLECTION();
+if (!collectionPath) return;
 
 // Verificar si está asignado (usando la caché allTripsData)
 const trip = allTripsData.find(t => t.id === tripId);
 if (trip && trip.isAssigned) {
-showStatus(`Error: No se puede finalizar un ticket asignado a una ruta (${trip.assignedRouteId.slice(-4)}). Desasígnalo primero.`, 'error');
+showStatus(`Error: No se puede finalizar un ticket asignado a una ruta (${trip.assignedRouteId?.slice(-4) || '?'}). Desasígnalo primero.`, 'error');
 return;
 }
 
 
 if (prompt(`¿Seguro que deseas finalizar el viaje de ${clientName}? El ticket se moverá a 'Finalizados'. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
 try {
-const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+const tripRef = doc(db, collectionPath, tripId);
 await updateDoc(tripRef, { status: 'Finalizado' });
 showStatus(`Viaje de ${clientName} finalizado.`);
 } catch (error) {
@@ -1247,7 +1356,11 @@ showStatus('Error al finalizar viaje: ' + error.message, 'error');
 }
 
 function listenForTrips() {
-const q = collection(db, TRIPS_COLLECTION());
+if (!userId) return;
+const collectionPath = TRIPS_COLLECTION();
+if (!collectionPath) return;
+
+const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
 allTripsData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }));
 renderTripLists(allTripsData);
@@ -1262,6 +1375,8 @@ if(listEl) listEl.innerHTML = 'Error al cargar tickets.';
 function renderTripLists(trips) {
 const activeListEl = document.getElementById('trips-list-active');
 const finishedListEl = document.getElementById('trips-list-finished');
+if(!activeListEl || !finishedListEl) return; // Add null checks
+
 activeListEl.innerHTML = '';
 finishedListEl.innerHTML = '';
 
@@ -1287,7 +1402,7 @@ setupTripCardButtons();
 }
 
 function createTripCardHtml(data, type) {
-const assignedText = data.isAssigned ?
+const assignedText = data.isAssigned && data.assignedRouteId ?
 `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Asignado a Ruta #${data.assignedRouteId.slice(-4)}</span>` :
 `<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs">Pendiente de Ruta</span>`;
 
@@ -1376,6 +1491,7 @@ showStatus("Error al generar resumen de IA.", "error");
 } finally {
 button.innerHTML = originalHtml;
 button.disabled = false;
+lucide.createIcons(); // Re-render icon if it was part of originalHtml
 }
 });
 });
@@ -1395,6 +1511,8 @@ const button = e.currentTarget;
 const tripId = button.getAttribute('data-id');
 const clientName = button.getAttribute('data-client');
 const isAssigned = button.getAttribute('data-is-assigned') === 'true';
+const collectionPath = TRIPS_COLLECTION();
+if (!collectionPath) return;
 
 let confirmMsg = `¿Seguro que deseas eliminar el viaje de ${clientName}? Esta acción es permanente. Escribe 'eliminar' para confirmar.`;
 if (isAssigned) {
@@ -1403,7 +1521,7 @@ confirmMsg = `ADVERTENCIA: Este ticket está asignado a una ruta. Si lo borras, 
 
 if (prompt(confirmMsg) === 'eliminar') {
 try {
-await deleteDoc(doc(db, TRIPS_COLLECTION(), tripId));
+await deleteDoc(doc(db, collectionPath, tripId));
 showStatus(`Viaje de ${clientName} eliminado.`, 'success');
 } catch (error) {
 console.error("Error al eliminar viaje:", error);
@@ -1436,7 +1554,11 @@ function setupRouteAssignmentLogic() {
 
 
 function listenForRoutes() {
-const q = collection(db, ROUTES_COLLECTION());
+if (!userId) return;
+const collectionPath = ROUTES_COLLECTION();
+if (!collectionPath) return;
+
+const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
 allRoutesData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }));
 renderRouteLists(allRoutesData); // Renderizar ambas listas
@@ -1461,6 +1583,8 @@ if(listEl) listEl.innerHTML = 'Error al cargar rutas.';
 async function handleSaveRoute(e) {
 e.preventDefault();
 if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
+const collectionPath = ROUTES_COLLECTION();
+if (!collectionPath) return;
 
 const driverId = document.getElementById('route-driver-id').value;
 const vehicleId = document.getElementById('route-vehicle-id').value;
@@ -1484,7 +1608,7 @@ const editingId = currentlyEditingRouteId;
 try {
 if (editingId) {
 // Actualizar Ruta
-const routeRef = doc(db, ROUTES_COLLECTION(), editingId);
+const routeRef = doc(db, collectionPath, editingId);
 await updateDoc(routeRef, routeData);
 showStatus(`Ruta #${editingId.slice(-4)} actualizada.`, 'success');
 } else {
@@ -1493,7 +1617,7 @@ routeData.trips = [];
 routeData.totalPrice = 0;
 routeData.status = 'Activa';
 routeData.createdAt = serverTimestamp();
-const docRef = await addDoc(collection(db, ROUTES_COLLECTION()), routeData);
+const docRef = await addDoc(collection(db, collectionPath), routeData);
 showStatus(`Ruta #${docRef.id.slice(-4)} creada para ${driver.name}.`, 'success');
 }
 handleCancelRouteEdit();
@@ -1531,6 +1655,9 @@ async function handleFinalizeRouteFromCard(e) {
 const routeId = e.currentTarget.getAttribute('data-id');
 const route = allRoutesData.find(r => r.id === routeId);
 if (!route) return;
+const routeCollectionPath = ROUTES_COLLECTION();
+const tripCollectionPath = TRIPS_COLLECTION();
+if (!routeCollectionPath || !tripCollectionPath) return;
 
 if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
 try {
@@ -1538,12 +1665,12 @@ const batch = writeBatch(db);
 
 // 1. Finalizar todos los trips
 route.trips.forEach(tripId => {
-const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+const tripRef = doc(db, tripCollectionPath, tripId);
 batch.update(tripRef, { status: 'Finalizado' });
 });
 
 // 2. Finalizar la ruta
-const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+const routeRef = doc(db, routeCollectionPath, routeId);
 batch.update(routeRef, { status: 'Finalizada', finishedAt: serverTimestamp() });
 
 await batch.commit();
@@ -1564,6 +1691,9 @@ async function handleDeleteRoute(e) {
 const routeId = e.currentTarget.getAttribute('data-id');
 const route = allRoutesData.find(r => r.id === routeId);
 if (!route) return;
+const routeCollectionPath = ROUTES_COLLECTION();
+const tripCollectionPath = TRIPS_COLLECTION();
+if (!routeCollectionPath || !tripCollectionPath) return;
 
 if (prompt(`¿Seguro que deseas ELIMINAR la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados volverán a estar 'Pendientes'. Escribe 'eliminar' para confirmar.`) === 'eliminar') {
 try {
@@ -1571,12 +1701,12 @@ const batch = writeBatch(db);
 
 // 1. Desasignar todos los trips
 route.trips.forEach(tripId => {
-const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+const tripRef = doc(db, tripCollectionPath, tripId);
 batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
 });
 
 // 2. Eliminar la ruta
-const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+const routeRef = doc(db, routeCollectionPath, routeId);
 batch.delete(routeRef);
 
 await batch.commit();
@@ -1597,6 +1727,7 @@ showStatus('Error al eliminar ruta: ' + error.message, 'error');
 function renderRouteLists(routes) {
 const activeListEl = document.getElementById('active-routes-list');
 const finishedListEl = document.getElementById('finished-routes-list');
+if (!activeListEl || !finishedListEl) return; // Add null check
 activeListEl.innerHTML = '';
 finishedListEl.innerHTML = '';
 
@@ -1609,7 +1740,7 @@ if (activeRoutes.length === 0) {
 activeListEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas activas.</p>';
 } else {
 activeRoutes.forEach(route => {
-const tripCount = route.trips.length;
+const tripCount = route.trips?.length || 0; // Add null check for trips array
 const total = formatPrice(route.totalPrice);
 activeListEl.innerHTML += `
 <div class="p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card">
@@ -1646,7 +1777,7 @@ if (finishedRoutes.length === 0) {
 finishedListEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas finalizadas.</p>';
 } else {
 finishedRoutes.forEach(route => {
-const tripCount = route.trips.length;
+const tripCount = route.trips?.length || 0; // Add null check for trips array
 const total = formatPrice(route.totalPrice);
 finishedListEl.innerHTML += `
 <div class="p-3 bg-gray-100 rounded-lg border border-gray-300 opacity-80">
@@ -1715,7 +1846,7 @@ detailsInfoEl.innerHTML = `
 <p id="route-date-details" class="text-sm text-gray-500"><i data-lucide="calendar" class="w-4 h-4 inline-block mr-1 text-gray-500"></i> Fecha: ${route.date}</p>
 <p id="route-total-price" class="font-bold text-lg text-green-600 mt-2">Total Bruto de Ruta: ${formatPrice(route.totalPrice)}</p>
 <div id="route-ticket-buttons" class="mt-4 flex space-x-3">
-<button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150 btn-feedback" ${route.trips.length === 0 ? 'disabled' : ''}>
+<button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150 btn-feedback" ${route.trips?.length === 0 ? 'disabled' : ''}>
 <i data-lucide="eye" class="w-4 h-4 mr-2"></i> Ver Ticket Chofer
 </button>
 <button id="finalize-route-btn-details" data-id="${route.id}" class="bg-red-500 text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center btn-feedback">
@@ -1727,11 +1858,11 @@ if (routeIdDisplay) routeIdDisplay.textContent = `#${route.id.slice(-4)}`;
 
 // Rellenar tramos asignados
 assignedTripsEl.innerHTML = '';
-if (route.trips.length === 0) {
+if (!route.trips || route.trips.length === 0) { // Check if trips array exists
 assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-4 border border-dashed rounded-lg">Aún no hay tickets asignados a esta ruta.</p>';
 } else {
 const assignedTrips = allTripsData.filter(t => route.trips.includes(t.id));
-assignedTrips.sort((a, b) => a.time.localeCompare(b.time));
+assignedTrips.sort((a, b) => (a.time || '').localeCompare(b.time || '')); // Add null check for time
 assignedTrips.forEach(trip => {
 let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
 if (trip.petSize && trip.petSize !== 'ninguno') {
@@ -1745,7 +1876,7 @@ assignedTripsEl.innerHTML += `
 <i data-lucide="x" class="w-4 h-4"></i>
 </button>
 </div>
-<p class="text-xs text-gray-600">${trip.time} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
+<p class="text-xs text-gray-600">${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
 <p class="text-xs text-gray-600">${petInfo}</p>
 <span class="text-xs font-bold text-green-600">${formatPrice(trip.price)}</span>
 </div>
@@ -1778,7 +1909,7 @@ if (availableTrips.length === 0) {
 listEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay tickets pendientes de asignación.</p>';
 return;
 }
-availableTrips.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)); // Ordenar por fecha y hora
+availableTrips.sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`)); // Ordenar por fecha y hora
 availableTrips.forEach(trip => {
 let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
 if (trip.petSize && trip.petSize !== 'ninguno') {
@@ -1790,7 +1921,7 @@ listEl.innerHTML += `
 <div class="p-3 bg-gray-50 border rounded-lg border-gray-200 flex justify-between items-center">
 <div>
 <p class="font-semibold text-sm text-gray-700">${trip.clientName}</p>
-<p class="text-xs text-gray-500">${trip.date} - ${trip.time} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
+<p class="text-xs text-gray-500">${trip.date || 'Sin fecha'} - ${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
 <p class="text-xs text-gray-500">${petInfo}</p>
 </div>
 <button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" ${isCurrentRouteSelected ? '' : 'disabled'} title="${isCurrentRouteSelected ? 'Añadir a ruta seleccionada' : 'Selecciona una ruta activa primero'}">
@@ -1810,15 +1941,22 @@ if (!currentRouteData) { showStatus('Debe seleccionar una ruta activa primero.',
 const tripId = e.currentTarget.getAttribute('data-trip-id');
 const trip = allTripsData.find(t => t.id === tripId);
 if (!trip) return;
+const collectionPath = ROUTES_COLLECTION();
+const tripCollectionPath = TRIPS_COLLECTION();
+if (!collectionPath || !tripCollectionPath) return;
+
 
 // Actualización de precio corregida
 const currentPrice = currentRouteData.totalPrice || 0;
 const newTotalPrice = currentPrice + (trip.price || 0);
-const newTripsArray = [...currentRouteData.trips, tripId];
+// Asegurar que trips sea un array antes de usar spread operator
+const currentTrips = Array.isArray(currentRouteData.trips) ? currentRouteData.trips : [];
+const newTripsArray = [...currentTrips, tripId];
+
 
 try {
-const routeRef = doc(db, ROUTES_COLLECTION(), currentRouteData.id);
-const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+const routeRef = doc(db, collectionPath, currentRouteData.id);
+const tripRef = doc(db, tripCollectionPath, tripId);
 
 // Usar batch para asegurar atomicidad
 const batch = writeBatch(db);
@@ -1829,11 +1967,9 @@ await batch.commit();
 showStatus(`Ticket ${trip.ticketId} asignado a Ruta #${currentRouteData.id.slice(-4)}`, 'success');
 
 // Actualización UI Inmediata (Opcional, pero mejora la experiencia)
-// Buscar y mover el elemento DOM en lugar de depender solo de onSnapshot
 const tripCard = e.currentTarget.closest('.p-3');
 if (tripCard) tripCard.remove(); // Quitar de pendientes
-// Añadir a asignados visualmente (más complejo, onSnapshot debería bastar)
-// updateRouteDetails(currentRouteData); // Forzar re-renderizado
+
 
 } catch (error) {
 console.error("Error al asignar viaje a ruta:", error);
@@ -1847,17 +1983,23 @@ const tripId = e.currentTarget.getAttribute('data-trip-id');
 const routeId = e.currentTarget.getAttribute('data-route-id');
 const trip = allTripsData.find(t => t.id === tripId);
 if (!trip || trip.assignedRouteId !== routeId) return;
+const routeCollectionPath = ROUTES_COLLECTION();
+const tripCollectionPath = TRIPS_COLLECTION();
+if (!routeCollectionPath || !tripCollectionPath) return;
 
 // Actualización de precio corregida
 const currentPrice = currentRouteData.totalPrice || 0;
 const tripPrice = trip.price || 0;
 const newTotalPrice = Math.max(0, currentPrice - tripPrice); // Evitar negativos
-const newTripsArray = currentRouteData.trips.filter(id => id !== tripId);
+// Asegurar que trips sea un array
+const currentTrips = Array.isArray(currentRouteData.trips) ? currentRouteData.trips : [];
+const newTripsArray = currentTrips.filter(id => id !== tripId);
+
 
 if (prompt(`¿Seguro que deseas desasignar el viaje de ${trip.clientName} de la ruta #${routeId.slice(-4)}? El ticket volverá a estar pendiente. Escribe 'desasignar' para confirmar.`) === 'desasignar') {
 try {
-const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
-const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+const routeRef = doc(db, routeCollectionPath, routeId);
+const tripRef = doc(db, tripCollectionPath, tripId);
 
 const batch = writeBatch(db);
 batch.update(routeRef, { trips: newTripsArray, totalPrice: newTotalPrice });
@@ -1866,10 +2008,6 @@ await batch.commit();
 
 showStatus(`Ticket ${trip.ticketId} desasignado y marcado como pendiente.`, 'success');
 
-// Actualización UI Inmediata
-// const tripCard = e.currentTarget.closest('.p-3');
-// if (tripCard) tripCard.remove(); // Quitar de asignados
-// renderPendingTripsList(); // Volver a añadir a pendientes visualmente
 
 } catch (error) {
 console.error("Error al desasignar viaje:", error);
@@ -1886,19 +2024,26 @@ if (!route) {
 showStatus('Error: Ruta no encontrada.', 'error');
 return;
 }
+const routeCollectionPath = ROUTES_COLLECTION();
+const tripCollectionPath = TRIPS_COLLECTION();
+if (!routeCollectionPath || !tripCollectionPath) return;
 
-if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
+const tripCount = route.trips?.length || 0; // Null check for trips array
+
+if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
 try {
 const batch = writeBatch(db);
 
-// 1. Finalizar todos los trips
+// 1. Finalizar todos los trips (if trips exist)
+if (Array.isArray(route.trips)) {
 route.trips.forEach(tripId => {
-const tripRef = doc(db, TRIPS_COLLECTION(), tripId);
+const tripRef = doc(db, tripCollectionPath, tripId);
 batch.update(tripRef, { status: 'Finalizado' });
 });
+}
 
 // 2. Finalizar la ruta
-const routeRef = doc(db, ROUTES_COLLECTION(), routeId);
+const routeRef = doc(db, routeCollectionPath, routeId);
 batch.update(routeRef, { status: 'Finalizada', finishedAt: serverTimestamp() });
 
 await batch.commit();
@@ -1919,8 +2064,8 @@ showStatus('Error al finalizar ruta: ' + error.message, 'error');
 // --- LÓGICA DEL MODAL DE TICKET (MEJORADO CON GEMINI) ---
 
 function generateRouteTicket(route, geminiSummary) {
-const routeTrips = allTripsData.filter(t => route.trips.includes(t.id));
-routeTrips.sort((a, b) => a.time.localeCompare(b.time));
+const routeTrips = allTripsData.filter(t => route.trips?.includes(t.id)); // Null check
+routeTrips.sort((a, b) => (a.time || '').localeCompare(b.time || '')); // Null check
 let routeDetailsText = '';
 let routeDetailsHtml = '';
 routeTrips.forEach((trip, index) => {
@@ -1932,7 +2077,7 @@ routeDetailsText += `
 *TRAMO ${index + 1}* (Boleto #${trip.ticketId})
 Cliente: ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})
 ${petInfoText}
-- Recogida (Hora Aprox.): ${trip.time}
+- Recogida (Hora Aprox.): ${trip.time || 'Sin hora'}
 - Origen: ${trip.addressOrigin}, ${trip.localityOrigin}
 - Destino: ${trip.addressDest}, ${trip.localityDest}
 - Precio Cliente: ${formatPrice(trip.price)}
@@ -1943,7 +2088,7 @@ routeDetailsHtml += `
 <p class="section-title">TRAMO ${index + 1} (Boleto #${trip.ticketId})</p>
 <p><strong>Cliente:</strong> ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})</p>
 <p><strong>Info:</strong> ${petInfoText}</p>
-<p><strong>Recogida (Aprox):</strong> ${trip.time}</p>
+<p><strong>Recogida (Aprox):</strong> ${trip.time || 'Sin hora'}</p>
 <p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p>
 <p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p>
 <p class="highlight">Precio Cliente: ${formatPrice(trip.price)}</p>
@@ -2013,7 +2158,7 @@ const text = `
 Hola ${trip.clientName}, tu viaje ha sido registrado (Ticket #${trip.ticketId}).
 *DETALLES DE TU VIAJE:*
 - *Fecha:* ${trip.date}
-- *Horario Aprox. Recogida:* ${trip.time}
+- *Horario Aprox. Recogida:* ${trip.time || 'Sin hora'}
 - *Info:* ${petInfo}
 - *Punto de Recogida:* ${trip.addressOrigin}, ${trip.localityOrigin}
 - *Destino final:* ${trip.addressDest}, ${trip.localityDest}
@@ -2030,7 +2175,7 @@ const html = `
 <p><strong>Teléfono:</strong> ${trip.clientPhone || 'N/A'}</p>
 <p class="section-title mt-4">Detalles del Viaje</p>
 <p><strong>Fecha:</strong> ${trip.date}</p>
-<p><strong>Hora Aprox:</strong> ${trip.time}</p>
+<p><strong>Hora Aprox:</strong> ${trip.time || 'Sin hora'}</p>
 <p><strong>Info:</strong> ${petInfo}</p>
 <p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p>
 <p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p>
@@ -2048,7 +2193,7 @@ allRoutesData.find(r => r.id === tripData.assignedRouteId) :
 null;
 modalTicketData.client = generateClientTicket(tripData, routeData);
 if (routeData) {
-const routeTrips = allTripsData.filter(t => routeData.trips.includes(t.id));
+const routeTrips = allTripsData.filter(t => routeData.trips?.includes(t.id)); // Null check
 const geminiSummary = await getGeminiDriverSummary(routeData, routeTrips);
 modalTicketData.driver = generateRouteTicket(routeData, geminiSummary);
 } else {
@@ -2081,7 +2226,7 @@ button.innerHTML = `
 Generando...`;
 button.disabled = true;
 try {
-const routeTrips = allTripsData.filter(t => currentRouteData.trips.includes(t.id));
+const routeTrips = allTripsData.filter(t => currentRouteData.trips?.includes(t.id)); // Null check
 const geminiSummary = await getGeminiDriverSummary(currentRouteData, routeTrips);
 modalTicketData.driver = generateRouteTicket(currentRouteData, geminiSummary);
 modalTicketData.client = {
