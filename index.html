@@ -610,7 +610,7 @@ setLogLevel('debug');
 
 // --- Variables Globales de Firebase ---
 // CORREGIDO: Usar 'mgtransporte-app' como appId por defecto si __app_id no está definido
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'mgtransporte-app';
+// const appId = typeof __app_id !== 'undefined' ? __app_id : 'mgtransporte-app'; // Ya no usamos appId en las rutas
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // Usar token global si está disponible
 
 // Your web app's Firebase configuration (FROM USER INPUT - LATEST VERSION, CLEANED)
@@ -783,21 +783,14 @@ showStatus('La configuración de Firebase es inválida o no se encontró.', 'err
 
 
 // --- COLECCIONES ---
-// CORREGIDO: Las funciones ahora usan directamente userId, asegurándose de que esté definido
-const baseCollectionPath = () => {
-  if (!userId) {
-    console.error("Intentando obtener ruta de colección antes de que userId esté listo.");
-    return null; // Devolver null si userId aún no está disponible
-  }
-  // No usar la variable `appId` del Canvas aquí
-  return `users/${userId}`; // Ruta simplificada: users/{userId}
-};
+// CORREGIDO: Usar una ruta pública/compartida para todos los datos
+const baseCollectionPath = 'shared_data'; // Nombre de la colección raíz compartida
 
-const VEHICLES_COLLECTION = () => userId ? `${baseCollectionPath()}/vehicles` : null;
-const DRIVERS_COLLECTION = () => userId ? `${baseCollectionPath()}/drivers` : null;
-const CUSTOMERS_COLLECTION = () => userId ? `${baseCollectionPath()}/customers` : null;
-const TRIPS_COLLECTION = () => userId ? `${baseCollectionPath()}/trips` : null;
-const ROUTES_COLLECTION = () => userId ? `${baseCollectionPath()}/routes` : null;
+const VEHICLES_COLLECTION = () => `${baseCollectionPath}/vehicles`;
+const DRIVERS_COLLECTION = () => `${baseCollectionPath}/drivers`;
+const CUSTOMERS_COLLECTION = () => `${baseCollectionPath}/customers`;
+const TRIPS_COLLECTION = () => `${baseCollectionPath}/trips`;
+const ROUTES_COLLECTION = () => `${baseCollectionPath}/routes`;
 
 
 // --- SECCIÓN DE GEMINI API ---
@@ -811,8 +804,9 @@ await new Promise(resolve => setTimeout(resolve, delay));
 return fetchWithBackoff(url, options, retries - 1, delay * 2); // Exponential backoff
 }
 // Handle other errors (like 400 Bad Request, 500 Internal Server Error)
-console.error(`HTTP error! status: ${response.status}`, await response.text());
-throw new Error(`HTTP error! status: ${response.status}`);
+const errorBody = await response.text(); // Intenta obtener más detalles del error
+console.error(`HTTP error! status: ${response.status}`, errorBody);
+throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`);
 }
 return response.json();
 } catch (error) {
@@ -851,8 +845,17 @@ return text;
 } else {
 console.warn("Respuesta de Gemini vacía o inesperada:", result);
 // Intentar extraer texto de error si existe
-const errorDetails = result?.promptFeedback?.blockReason?.toString() || result?.error?.message || 'Respuesta inesperada';
+const feedback = result?.promptFeedback;
+const blockReason = feedback?.blockReason;
+const safetyRatings = feedback?.safetyRatings?.map(r => `${r.category}: ${r.probability}`).join(', ');
+let errorDetails = 'Respuesta inesperada';
+if (blockReason) {
+    errorDetails = `Bloqueado por: ${blockReason}. ${safetyRatings || ''}`.trim();
+} else if (result?.error?.message) {
+    errorDetails = result.error.message;
+}
 return `No se pudo generar el resumen (${errorDetails}).`;
+
 }
 } catch (error) {
 console.error("Error llamando a la API de Gemini:", error);
@@ -920,10 +923,10 @@ return { html: summaryHtml, text: summaryPlainText };
 // --- LÓGICA DE VEHÍCULOS ---
 document.getElementById('vehicle-form').addEventListener('submit', async (e) => {
 e.preventDefault();
-if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
+// No necesitamos userId aquí porque la ruta es pública
 const collectionPath = VEHICLES_COLLECTION();
 if (!collectionPath) {
-    console.error("No se pudo obtener la ruta de la colección de vehículos.");
+    console.error("No se pudo obtener la ruta de la colección de vehículos (userId no listo?).");
     showStatus('Error: No se pudo conectar a la base de datos (vehículos).', 'error');
     return;
 }
@@ -945,9 +948,13 @@ showStatus('Error al guardar el vehículo: ' + error.message, 'error');
 });
 
 function listenForVehicles() {
-if (!userId) return; // Asegurar que userId exista
+// No necesitamos userId aquí, pero sí esperamos a que db esté listo
+if (!db) {
+ console.warn("Firestore (db) no está listo aún para escuchar vehículos.");
+ return;
+}
 const collectionPath = VEHICLES_COLLECTION();
-if (!collectionPath) return; // Asegurar que la ruta sea válida
+if (!collectionPath) return; // Si la función devuelve null (poco probable ahora)
 
 const q = collection(db, collectionPath);
 onSnapshot(q, (snapshot) => {
@@ -1009,7 +1016,6 @@ showStatus('Error al eliminar vehículo: ' + error.message, 'error');
 // --- LÓGICA DE CHOFERES ---
 document.getElementById('driver-form').addEventListener('submit', async (e) => {
 e.preventDefault();
-if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
 const collectionPath = DRIVERS_COLLECTION();
 if (!collectionPath) {
     console.error("No se pudo obtener la ruta de la colección de choferes.");
@@ -1034,7 +1040,7 @@ showStatus('Error al guardar el chofer: ' + error.message, 'error');
 });
 
 function listenForDrivers() {
-if (!userId) return;
+if (!db) return;
 const collectionPath = DRIVERS_COLLECTION();
 if (!collectionPath) return;
 
@@ -1095,10 +1101,10 @@ showStatus('Error al eliminar chofer: ' + error.message, 'error');
 }
 }
 
-// --- LÓGICA DE CLIENTES (NUEVA) ---
+// --- LÓGICA DE CLIENTES ---
 
 function listenForCustomers() {
-if (!userId) return;
+if (!db) return;
 const collectionPath = CUSTOMERS_COLLECTION();
 if (!collectionPath) return;
 
@@ -1171,7 +1177,6 @@ btn.addEventListener('click', handleDeleteCustomer);
 }
 
 async function saveOrUpdateCustomer(tripData) {
-if (!userId) return;
 const collectionPath = CUSTOMERS_COLLECTION();
 if (!collectionPath) return;
 
@@ -1254,11 +1259,10 @@ showStatus('Error al eliminar cliente: ' + error.message, 'error');
 
 document.getElementById('trip-form').addEventListener('submit', async (e) => {
 e.preventDefault();
-if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
 const collectionPath = TRIPS_COLLECTION();
 if (!collectionPath) {
   showStatus('Error: No se pudo determinar la ruta de la base de datos para viajes.', 'error');
-  console.error("TRIPS_COLLECTION() devolvió null. userId:", userId);
+  console.error("TRIPS_COLLECTION() devolvió null.");
   return;
 }
 console.log("Intentando guardar en:", collectionPath); // Log para depurar ruta
@@ -1380,7 +1384,7 @@ showStatus('Error al finalizar viaje: ' + error.message, 'error');
 }
 
 function listenForTrips() {
-if (!userId) return;
+if (!db) return;
 const collectionPath = TRIPS_COLLECTION();
 if (!collectionPath) return;
 
@@ -1578,7 +1582,7 @@ function setupRouteAssignmentLogic() {
 
 
 function listenForRoutes() {
-if (!userId) return;
+if (!db) return;
 const collectionPath = ROUTES_COLLECTION();
 if (!collectionPath) return;
 
@@ -1606,7 +1610,6 @@ if(listEl) listEl.innerHTML = 'Error al cargar rutas.';
 
 async function handleSaveRoute(e) {
 e.preventDefault();
-if (!userId) { showStatus('Error: Usuario no autenticado.', 'error'); return; }
 const collectionPath = ROUTES_COLLECTION();
 if (!collectionPath) return;
 
@@ -1682,16 +1685,19 @@ if (!route) return;
 const routeCollectionPath = ROUTES_COLLECTION();
 const tripCollectionPath = TRIPS_COLLECTION();
 if (!routeCollectionPath || !tripCollectionPath) return;
+const tripCount = route.trips?.length || 0; // Null check
 
-if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
+if (prompt(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados también se marcarán como finalizados. Escribe 'finalizar' para confirmar.`) === 'finalizar') {
 try {
 const batch = writeBatch(db);
 
-// 1. Finalizar todos los trips
-route.trips.forEach(tripId => {
-const tripRef = doc(db, tripCollectionPath, tripId);
-batch.update(tripRef, { status: 'Finalizado' });
-});
+// 1. Finalizar todos los trips (if trips exist)
+if(Array.isArray(route.trips)){
+    route.trips.forEach(tripId => {
+        const tripRef = doc(db, tripCollectionPath, tripId);
+        batch.update(tripRef, { status: 'Finalizado' });
+    });
+}
 
 // 2. Finalizar la ruta
 const routeRef = doc(db, routeCollectionPath, routeId);
@@ -1718,16 +1724,19 @@ if (!route) return;
 const routeCollectionPath = ROUTES_COLLECTION();
 const tripCollectionPath = TRIPS_COLLECTION();
 if (!routeCollectionPath || !tripCollectionPath) return;
+const tripCount = route.trips?.length || 0; // Null check
 
-if (prompt(`¿Seguro que deseas ELIMINAR la Ruta #${route.id.slice(-4)}? Todos sus ${route.trips.length} viajes asignados volverán a estar 'Pendientes'. Escribe 'eliminar' para confirmar.`) === 'eliminar') {
+if (prompt(`¿Seguro que deseas ELIMINAR la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados volverán a estar 'Pendientes'. Escribe 'eliminar' para confirmar.`) === 'eliminar') {
 try {
 const batch = writeBatch(db);
 
-// 1. Desasignar todos los trips
-route.trips.forEach(tripId => {
-const tripRef = doc(db, tripCollectionPath, tripId);
-batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
-});
+// 1. Desasignar todos los trips (if trips exist)
+if(Array.isArray(route.trips)){
+    route.trips.forEach(tripId => {
+        const tripRef = doc(db, tripCollectionPath, tripId);
+        batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+    });
+}
 
 // 2. Eliminar la ruta
 const routeRef = doc(db, routeCollectionPath, routeId);
