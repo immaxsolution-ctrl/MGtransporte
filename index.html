@@ -612,13 +612,14 @@ setLogLevel('debug');
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Usar appId global si está disponible
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // Usar token global si está disponible
 
-// Your web app's Firebase configuration (FROM USER INPUT)
-// **VERIFICAR QUE ESTOS DATOS SEAN EXACTAMENTE IGUALES A LOS DE TU CONSOLA FIREBASE**
+// Your web app's Firebase configuration (FROM USER INPUT - LATEST VERSION)
+// **¡¡ASEGÚRATE DE QUE ESTOS DATOS SEAN EXACTAMENTE IGUALES A LOS DE TU CONSOLA FIREBASE!!**
+// **CORREGIDO: Eliminados espacios iniciales/caracteres extraños**
 const firebaseConfig = {
   apiKey: "AIzaSyCSCWBt9f9k4bclDItYGpgAzSuPY0Thu1s",
   authDomain: "mgtrasporte-44118.firebaseapp.com",
   projectId: "mgtrasporte-44118",
-  storageBucket: "mgtrasporte-44118.appspot.com", // Usar .appspot.com por compatibilidad
+  storageBucket: "mgtrasporte-44118.firebasestorage.app", // Asegúrate que este es el correcto
   messagingSenderId: "181650909603",
   appId: "1:181650909603:web:ebeeb08a1daa60b00d5216",
   measurementId: "G-PL94Y29T4X"
