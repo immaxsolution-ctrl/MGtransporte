@@ -469,9 +469,10 @@ Cancelar Edición
 <h2 class="text-xl font-semibold mb-4 text-gray-700 flex justify-between items-center">
 Ruta Seleccionada
 </h2>
-<p id="route-planner-guide" class="text-center text-gray-500 p-4 border border-dashed rounded-lg">
-↑ 2. Haz clic en el botón '+' de un ticket pendiente para asignarlo a esta ruta.
-</p>
+<div id="route-planner-guide" class="text-center text-gray-500 p-4 border border-dashed rounded-lg">
+<p class="font-semibold mb-2">Paso 1: Selecciona una Ruta</p>
+<p class="text-sm">Ve a "Rutas Creadas", haz clic en "Planificar esta Ruta" en una ruta activa.</p>
+</div>
 <div id="current-route-planner-container" class="hidden">
 <!-- Los detalles de la ruta seleccionada y sus tramos aparecerán aquí -->
 </div>
@@ -740,7 +741,8 @@ function setupTabs() {
         document.getElementById('sub-tab-rutas-asignar').classList.add('active');
         // Al entrar a asignar, renderizar las listas
         renderPendingTripsList();
-        renderActiveRoutesForPlanner(); // Renderizar la lista de rutas en la columna de asignación
+        // CORREGIDO: Eliminar la llamada a la función que no existe
+        // renderActiveRoutesForPlanner(); 
     });
 
     // Sub-Pestañas (Anidadas en Rutas Creadas)
@@ -923,7 +925,6 @@ function stopDataListeners() {
     detachListeners = []; // Limpiar el array
     console.log("Listeners detenidos.");
 }
-
 
 // --- LÓGICAS DE DATOS (Vehículos, Choferes, Clientes, Viajes, Rutas) ---
 
@@ -1610,10 +1611,14 @@ async function handleFinalizeRouteFromCard(e) {
     if (confirm(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados también se marcarán como finalizados.`)) {
         try {
             const batch = writeBatch(db);
+            // CORREGIDO: Filtrar por viajes que SÍ existen
             if(Array.isArray(route.trips)){
+                const existingTripIds = allTripsData.map(t => t.id);
                 route.trips.forEach(tripId => {
-                    const tripRef = doc(db, tripCollectionPath, tripId);
-                    batch.update(tripRef, { status: 'Finalizado' });
+                    if (existingTripIds.includes(tripId)) { // Solo finalizar si el trip existe
+                        const tripRef = doc(db, tripCollectionPath, tripId);
+                        batch.update(tripRef, { status: 'Finalizado' });
+                    }
                 });
             }
             const routeRef = doc(db, routeCollectionPath, routeId);
@@ -1641,10 +1646,14 @@ async function handleDeleteRoute(e) {
     if (confirm(`¿Seguro que deseas ELIMINAR la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados volverán a estar 'Pendientes'.`)) {
         try {
             const batch = writeBatch(db);
+            // CORREGIDO: Filtrar por viajes que SÍ existen
             if(Array.isArray(route.trips)){
+                const existingTripIds = allTripsData.map(t => t.id);
                 route.trips.forEach(tripId => {
-                    const tripRef = doc(db, tripCollectionPath, tripId);
-                    batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+                    if (existingTripIds.includes(tripId)) { // Solo desasignar si el trip existe
+                        const tripRef = doc(db, tripCollectionPath, tripId);
+                        batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+                    }
                 });
             }
             const routeRef = doc(db, routeCollectionPath, routeId);
@@ -1847,8 +1856,7 @@ function renderPendingTripsList() {
     
     // CORREGIDO: Mostrar TODOS los tickets pendientes, ordenados por fecha
     const availableTrips = allTripsData.filter(t => 
-        !t.isAssigned && 
-        t.status === 'Activo'
+        t.status === 'Activo' // Mostrar todos los activos
     ).sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
     
     // Actualizar guía
@@ -1868,25 +1876,32 @@ function renderPendingTripsList() {
         if (trip.petSize && trip.petSize !== 'ninguno') petInfo += ` (${trip.petSize})`;
         const isCurrentRouteSelected = currentRouteData !== null;
         
-        // CORREGIDO: Lógica de resaltado
-        let borderColor = 'border-gray-200';
+        // CORREGIDO: Lógica de resaltado y "grayed out"
+        let cardClasses = 'border-gray-200';
+        let buttonDisabled = !isCurrentRouteSelected;
+        let buttonTitle = isCurrentRouteSelected ? 'Añadir a ruta seleccionada' : 'Selecciona una ruta activa primero';
         let dateMismatch = false;
-        if(currentRouteData && trip.date !== currentRouteData.date) {
-            borderColor = 'border-red-300'; // Fecha no coincide
+
+        if (trip.isAssigned) {
+            cardClasses = 'border-gray-300 opacity-50 pointer-events-none'; // Grisado
+            buttonDisabled = true;
+            buttonTitle = "Ya asignado a otra ruta";
+        } else if (currentRouteData && trip.date !== currentRouteData.date) {
+            cardClasses = 'border-red-300'; // Fecha no coincide
             dateMismatch = true;
         } else if (currentRouteData && trip.date === currentRouteData.date) {
-            borderColor = 'border-green-300'; // Fecha coincide
+            cardClasses = 'border-green-300'; // Fecha coincide
         }
         
         listEl.innerHTML += `
-        <div class="p-3 bg-gray-50 border-2 rounded-lg ${borderColor} flex justify-between items-center">
+        <div class="p-3 bg-gray-50 border-2 rounded-lg ${cardClasses} flex justify-between items-center">
             <div>
             <p class="font-semibold text-sm text-gray-700">${trip.clientName}</p>
             <p class="text-xs text-gray-500">${trip.date || 'Sin fecha'} - ${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
             <p class="text-xs text-gray-500">${petInfo}</p>
             ${dateMismatch ? `<p class="text-xs font-bold text-red-600">La fecha no coincide con la ruta</p>` : ''}
             </div>
-            <button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" ${isCurrentRouteSelected ? '' : 'disabled'} title="${isCurrentRouteSelected ? 'Añadir a ruta seleccionada' : 'Selecciona una ruta activa primero'}">
+            <button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" ${buttonDisabled ? 'disabled' : ''} title="${buttonTitle}">
             <i data-lucide="plus" class="w-4 h-4 inline-block mr-1"></i> Añadir
             </button>
         </div>
@@ -1914,9 +1929,15 @@ async function handleAssignTripToRoute(e) {
         }
     }
 
+    const currentTrips = Array.isArray(currentRouteData.trips) ? currentRouteData.trips : [];
+    // CORRECCIÓN: Evitar duplicados
+    if (currentTrips.includes(tripId)) {
+        showStatus("Este ticket ya está asignado a esta ruta.", "error");
+        return;
+    }
+    
     const currentPrice = currentRouteData.totalPrice || 0;
     const newTotalPrice = currentPrice + (trip.price || 0);
-    const currentTrips = Array.isArray(currentRouteData.trips) ? currentRouteData.trips : [];
     const newTripsArray = [...currentTrips, tripId];
 
     try {
@@ -1927,8 +1948,7 @@ async function handleAssignTripToRoute(e) {
         batch.update(tripRef, { isAssigned: true, assignedRouteId: currentRouteData.id });
         await batch.commit();
         showStatus(`Ticket ${trip.ticketId} asignado a Ruta #${currentRouteData.id.slice(-4)}`, 'success');
-        const tripCard = e.currentTarget.closest('.p-3');
-        if (tripCard) tripCard.remove();
+        // No es necesario remover la tarjeta, onSnapshot actualizará la lista de pendientes
     } catch (error) { console.error("Error al asignar viaje a ruta:", error); showStatus('Error al asignar viaje a ruta: ' + error.message, 'error'); }
 }
 async function handleRemoveTripFromRoute(e) {
@@ -1972,9 +1992,13 @@ async function handleFinalizeRouteFromDetails(e) {
         try {
             const batch = writeBatch(db);
             if (Array.isArray(route.trips)) {
+                // CORREGIDO: Verificar si el trip existe antes de intentar actualizarlo
+                const existingTripIds = allTripsData.map(t => t.id);
                 route.trips.forEach(tripId => {
-                    const tripRef = doc(db, tripCollectionPath, tripId);
-                    batch.update(tripRef, { status: 'Finalizado' });
+                    if (existingTripIds.includes(tripId)) {
+                        const tripRef = doc(db, tripCollectionPath, tripId);
+                        batch.update(tripRef, { status: 'Finalizado' });
+                    }
                 });
             }
             const routeRef = doc(db, routeCollectionPath, routeId);
@@ -1996,15 +2020,24 @@ function generateRouteTicket(route) {
     const routeTrips = allTripsData.filter(t => route.trips?.includes(t.id));
     routeTrips.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     let routeDetailsText = ''; let routeDetailsHtml = '';
+    
+    // CORRECCIÓN: Evitar suma duplicada. Calcular el total desde los trips filtrados.
+    let calculatedTotalPrice = 0;
+
     routeTrips.forEach((trip, index) => {
+        calculatedTotalPrice += trip.price || 0; // Sumar precio
         let petInfoText = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
         if (trip.petSize && trip.petSize !== 'ninguno') petInfoText += ` (${trip.petSize})`;
         routeDetailsText += `\n*TRAMO ${index + 1}* (Boleto #${trip.ticketId})\nCliente: ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})\n${petInfoText}\n- Recogida (Hora Aprox.): ${trip.time || 'Sin hora'}\n- Origen: ${trip.addressOrigin}, ${trip.localityOrigin}\n- Destino: ${trip.addressDest}, ${trip.localityDest}\n- Precio Cliente: ${formatPrice(trip.price)}\n------------------------------------\n`;
         routeDetailsHtml += `<div class="border-t border-gray-200 pt-3 mt-3"><p class="section-title">TRAMO ${index + 1} (Boleto #${trip.ticketId})</p><p><strong>Cliente:</strong> ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})</p><p><strong>Info:</strong> ${petInfoText}</p><p><strong>Recogida (Aprox):</strong> ${trip.time || 'Sin hora'}</p><p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p><p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p><p class="highlight">Precio Cliente: ${formatPrice(trip.price)}</p></div>`;
     });
-    const text = `*MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})\n*DATOS DEL CHOFER Y VEHÍCULO*\n- *Chofer:* ${route.driverName} (DNI: ${route.driverDni})\n- *Teléfono Chofer:* ${route.driverPhone}\n- *Vehículo:* ${route.vehicleModel} ${route.vehicleColor}\n- *Patente:* ${route.vehiclePlate}\n------------------------------------\n*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*${routeDetailsText}\n*TOTAL BRUTO DE RUTA:* ${formatPrice(route.totalPrice)}\n¡Buena ruta!`.trim();
+    
+    // Usar el total calculado en lugar del de la ruta (que podía estar desactualizado)
+    const totalBruto = formatPrice(calculatedTotalPrice); 
+    
+    const text = `*MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})\n*DATOS DEL CHOFER Y VEHÍCULO*\n- *Chofer:* ${route.driverName} (DNI: ${route.driverDni})\n- *Teléfono Chofer:* ${route.driverPhone}\n- *Vehículo:* ${route.vehicleModel} ${route.vehicleColor}\n- *Patente:* ${route.vehiclePlate}\n------------------------------------\n*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*${routeDetailsText}\n*TOTAL BRUTO DE RUTA:* ${totalBruto}\n¡Buena ruta!`.trim();
     // REMOVIDO: ${geminiSummary.html}
-    const html = `<div class="printable-ticket"><h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4><p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p><p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p><p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p><p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p><div class="mt-4"><p class="section-title">Tramos Asignados</p>${routeDetailsHtml}</div><div class="border-t border-gray-300 pt-3 mt-4"><p class="text-lg font-bold">TOTAL BRUTO RUTA: ${formatPrice(route.totalPrice)}</p></div></div>`.trim();
+    const html = `<div class="printable-ticket"><h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4><p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p><p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p><p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p><p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p><div class="mt-4"><p class="section-title">Tramos Asignados</p>${routeDetailsHtml}</div><div class="border-t border-gray-300 pt-3 mt-4"><p class="text-lg font-bold">TOTAL BRUTO RUTA: ${totalBruto}</p></div></div>`.trim();
     return { html, text };
 }
 function generateClientTicket(trip, routeData = null) {
