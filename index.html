@@ -1,804 +1,2123 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MG Transporte — Simplificado y funcional</title>
-
-<!-- Tailwind (CDN, deferred) -->
-<script defer src="https://cdn.tailwindcss.com"></script>
-
-<!-- Google font -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- SortableJS -->
-<script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
-<!-- jsPDF -->
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<!-- SheetJS -->
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<!-- Firebase (compat optional) -->
-<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MG Transporte - Sistema de Viajes Puerta a Puerta</title>
+<!-- CDN de Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Íconos de Lucide -->
+<script src="https://unpkg.com/lucide@latest"></script>
 <style>
-  :root{ --accent:#7c3aed; --accent2:#06b6d4; --bg-dark:#071026; --card-dark:rgba(255,255,255,0.03); --muted:#9fb1c8; }
-  [data-theme="dark"]{ background:var(--bg-dark); color:#e8f1fb; }
-  [data-theme="light"]{ background:#f6f9fc; color:#081028; --card-dark:#fff; --muted:#6b7280; }
-  body{ font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; margin:0; min-height:100vh; }
-  .app{ display:flex; gap:16px; padding:16px; box-sizing:border-box; }
-  .sidebar{ width:260px; border-radius:12px; padding:14px; background:var(--card-dark); }
-  .logo{ height:48px; width:48px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; display:flex;align-items:center;justify-content:center;font-weight:800; }
-  .nav button{ width:100%; text-align:left; padding:10px; border-radius:8px; display:flex; gap:8px; align-items:center; background:transparent; border:none; cursor:pointer; }
-  .nav button.active{ background:linear-gradient(90deg, rgba(124,58,237,0.08), rgba(6,182,212,0.04)); }
-  .main{ flex:1; display:flex; flex-direction:column; gap:12px; }
-  .topbar{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  .card{ background:var(--card-dark); border-radius:12px; padding:12px; }
-  #mapPlanner{ height:320px; border-radius:10px; background:white; overflow:hidden; }
-  table{ width:100%; border-collapse:collapse; }
-  th,td{ padding:8px; text-align:left; font-size:14px; }
-  .muted{ color:var(--muted); font-size:13px; }
-  .btn{ padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; border:none; }
-  .btn-primary{ background:linear-gradient(90deg,var(--accent),var(--accent2)); color:white; }
-  .status{ padding:6px 8px; border-radius:8px; font-weight:700; display:inline-block; }
-  .status-pend{ background:#f59e0b; color:#051622; } .status-asig{ background:#10b981; color:white; } .status-fin{ background:#6b7280; color:white; }
-  @media (max-width:1000px){ .app{ flex-direction:column; } .sidebar{ width:100%; order:2 } .main{ order:1 } }
+body {
+font-family: 'Inter', sans-serif;
+background-color: #f7f9fb; /* Fondo general gris claro */
+}
+/* Estilo del contenedor de login */
+#login-container {
+background-color: #f7f9fb; /* Fondo gris claro */
+}
+
+/* Colores personalizados */
+.color-primary { color: #5B48B3; }
+.bg-primary { background-color: #5B48B3; }
+.border-primary { border-color: #5B48B3; }
+.color-accent { color: #ff8c00; }
+.bg-accent { background-color: #ff8c00; }
+.ring-accent:focus { --tw-ring-color: #ff8c00; }
+
+.tab-button.active {
+border-bottom: 3px solid #ff8c00;
+color: #5B48B3;
+font-weight: 600;
+}
+.modal-tab-button.active {
+border-bottom: 3px solid #ff8c00;
+color: #5B48B3;
+font-weight: 600;
+}
+.route-status-card {
+border-left: 4px solid #ff8c00;
+}
+/* Estilo para la ruta seleccionada */
+.route-selected {
+background-color: #fef9c3 !important; /* bg-yellow-100 */
+border-color: #fcd34d !important; /* border-yellow-400 */
+border-width: 1px;
+box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+
+/* Sub-pestañas (Genéricas) */
+.sub-tab-button {
+padding: 8px 16px;
+border-bottom: 3px solid transparent;
+color: #6b7280;
+font-weight: 500;
+}
+.sub-tab-button.active {
+border-bottom-color: #5B48B3;
+color: #5B48B3;
+font-weight: 600;
+}
+
+/* Feedback de Botón */
+.btn-feedback {
+transition: all 0.1s ease;
+}
+.btn-feedback:active {
+transform: scale(0.98);
+opacity: 0.9;
+}
+/* Deshabilitado */
+.btn-feedback:disabled {
+transform: scale(1);
+opacity: 0.5 !important; /* Más fuerte para que se note */
+cursor: not-allowed;
+}
+
+
+/* Estilo para el Ticket en el Modal */
+.printable-ticket {
+font-family: 'Inter', sans-serif;
+border: 1px solid #e5e7eb;
+border-radius: 0.5rem;
+background: #ffffff;
+padding: 1.5rem;
+}
+.printable-ticket h4 {
+font-size: 1.125rem;
+font-weight: 700;
+color: #5B48B3;
+border-bottom: 2px solid #f3f4f6;
+padding-bottom: 0.5rem;
+margin-bottom: 1rem;
+display: flex;
+align-items: center;
+}
+.printable-ticket .section-title {
+font-size: 0.75rem;
+font-weight: 600;
+color: #6b7280;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+margin-bottom: 0.25rem;
+}
+.printable-ticket p {
+font-size: 0.9rem;
+color: #1f2937;
+margin-bottom: 0.5rem;
+}
+.printable-ticket .highlight {
+font-size: 1rem;
+font-weight: 600;
+color: #166534; /* Green */
+}
+.printable-ticket .pending {
+font-size: 0.9rem;
+font-weight: 600;
+color: #b45309; /* Amber */
+}
+.printable-ticket .icon {
+width: 1rem;
+height: 1rem;
+margin-right: 0.5rem;
+stroke: #5B48B3;
+}
+
+/* Estilo para el resumen de Gemini (REMOVIDO) */
+
+
+/* CORREGIDO: Ocultar elementos en la impresión */
+@media print {
+  /* Ocultar todo por defecto */
+  body, body * {
+    visibility: hidden;
+  }
+  
+  /* Definir el área imprimible */
+  #printable-area {
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  /* Hacer visibles solo los hijos del área imprimible */
+  #printable-area * {
+    visibility: visible !important;
+  }
+  
+  /* Ocultar la pestaña inactiva DENTRO del área imprimible */
+  #printable-area .modal-tab-content.hidden {
+      display: none !important;
+  }
+
+  /* Asegurar que el ticket ocupe el espacio */
+  .printable-ticket {
+    background-color: #ffffff !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    page-break-inside: avoid; /* Evitar que se corte el ticket */
+  }
+
+  /* Ocultar explícitamente otros elementos de la UI */
+  #login-container, #app > header, #app > .flex.border-b, 
+  .modal-actions-no-print, #close-modal-btn, 
+  #ticket-modal .flex.border-b {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
 </style>
 </head>
-<body data-theme="dark">
-  <div class="app">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-        <div class="logo">MG</div>
-        <div>
-          <div style="font-weight:800;">MG Transporte</div>
-          <div class="muted" style="font-size:12px;">Panel simplificado</div>
-        </div>
-      </div>
+<body class="min-h-screen"> <!-- Quitado bg-gray-100 para que login-container controle fondo -->
 
-      <nav class="nav" id="nav">
-        <button class="active" data-page="page-trips">✚ Viajes</button>
-        <button data-page="page-plan">🗺 Planificar</button>
-        <button data-page="page-clients">👥 Clientes</button>
-        <button data-page="page-drivers">🚗 Choferes</button>
-        <button data-page="page-vehicles">🔧 Vehículos</button>
-        <button data-page="page-tickets">✉️ Tickets</button>
-        <button data-page="page-settings">⚙️ Ajustes</button>
-      </nav>
+<!-- Contenedor de Login (Visible por defecto) -->
+<div id="login-container" class="flex items-center justify-center min-h-screen p-4">
+<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm">
+<div class="flex items-center justify-center h-12 w-12 mx-auto rounded-full bg-primary text-white text-lg font-bold mb-4">
+MG
+</div>
+<h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+<form id="login-form">
+<div class="mb-4">
+<label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
+<input type="email" id="login-email" value="admin@mgtransporte.com" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div class="mb-6">
+<label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+<input type="password" id="login-password" value="admin123" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div id="login-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+<button type="submit" id="login-btn" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 btn-feedback flex items-center justify-center">
+<span id="login-btn-text">Ingresar</span>
+<svg id="login-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+</svg>
+</button>
+</form>
+</div>
+</div>
 
-      <div style="margin-top:12px" class="muted">
-        <div>Estado: <span id="syncStatus">Local</span></div>
-        <div>Backups: <span id="backupCount">0</span></div>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="main">
-      <div class="topbar">
-        <div>
-          <h2 id="pageTitle">Viajes</h2>
-          <div class="muted" id="pageSub">Crear y listar viajes</div>
-        </div>
-
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="themeToggle" class="btn btn-primary">Tema</button>
-          <button id="btnExportPlan" class="btn">📑 Planilla Excel</button>
-          <button id="btnExportJSON" class="btn">Exportar JSON</button>
-          <button id="btnImportJSON" class="btn">Importar</button>
-        </div>
-      </div>
-
-      <!-- PAGES -->
-      <section id="page-trips" class="card page">
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <!-- Form -->
-          <div style="flex:1;min-width:300px;">
-            <h3>Agregar / Editar viaje</h3>
-            <div class="muted">Campos obligatorios (*)</div>
-            <div style="margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-              <div><label class="muted">* Cliente</label><input id="inClient" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">* Teléfono</label><input id="inPhone" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">* Origen (dirección)</label><input id="inOrigin" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">Localidad origen</label><input id="inOriginLocal" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">* Destino</label><input id="inDest" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">Localidad destino</label><input id="inDestLocal" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">* Fecha</label><input id="inDate" type="date" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">* Hora</label><input id="inTime" type="time" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">* Precio</label><input id="inPrice" type="number" min="0" step="0.01" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">Pasajeros</label><input id="inPax" type="number" min="1" value="1" class="w-full p-2 rounded" /></div>
-              <div><label class="muted">Mascota</label>
-                <select id="inPet" class="w-full p-2 rounded"><option value="none">Ninguna</option><option value="small">&lt;5kg</option><option value="large">&gt;5kg</option></select>
-              </div>
-              <div><label class="muted">Menores</label><select id="inMinors" class="w-full p-2 rounded"><option value="no">No</option><option value="si">Sí</option></select></div>
-
-              <div style="grid-column:1/-1"><label class="muted">Servicio</label>
-                <select id="inService" class="w-full p-2 rounded"><option value="compartido">Compartido</option><option value="exclusivo">Exclusivo</option></select>
-              </div>
-
-              <div style="grid-column:1/-1"><label class="muted">Observaciones</label><textarea id="inNotes" rows="3" class="w-full p-2 rounded"></textarea></div>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:10px;">
-              <button id="btnSaveTrip" class="btn btn-primary">Guardar</button>
-              <button id="btnResetForm" class="btn">Limpiar</button>
-              <div style="flex:1"></div>
-              <div class="muted">Modo: <span id="formMode">Nuevo</span></div>
-            </div>
-          </div>
-
-          <!-- List -->
-          <div style="flex:1;min-width:420px;">
-            <h3>Lista de viajes</h3>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-              <input id="qTrips" placeholder="Buscar..." class="w-full p-2 rounded" />
-              <select id="filterState" class="p-2 rounded"><option value="all">Todos</option><option value="Activo">Pendiente</option><option value="Asignado">Asignado</option><option value="Finalizado">Finalizado</option></select>
-            </div>
-
-            <div style="max-height:420px;overflow:auto;margin-top:8px;">
-              <table><thead><tr><th>Cliente</th><th>Origen→Destino</th><th>Fecha/Hora</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
-                <tbody id="tbodyTrips"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- PLAN -->
-      <section id="page-plan" class="card page hidden">
-        <div style="display:flex;gap:12px;">
-          <div style="width:320px;">
-            <h3>Viajes sin asignar</h3>
-            <div class="muted">Ordenados por fecha/hora — arrastrá al builder</div>
-            <div style="margin-top:8px;"><button id="btnOptimize" class="btn">Optimizar (hora)</button></div>
-            <div id="pendingList" style="max-height:520px; overflow:auto; margin-top:8px;"></div>
-          </div>
-
-          <div style="flex:1;">
-            <h3>Mapa</h3>
-            <div id="mapPlanner"></div>
-            <div class="muted" style="margin-top:6px">Geocoding: Nominatim (OpenStreetMap)</div>
-          </div>
-
-          <div style="width:380px;">
-            <h3>Ruta en construcción</h3>
-            <div style="display:flex;gap:8px;">
-              <select id="selDriver" class="w-full p-2 rounded"></select>
-              <select id="selVehicle" class="w-full p-2 rounded"></select>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-              <input id="selRouteDate" type="date" class="p-2 rounded" />
-              <button id="btnCreateRoute" class="btn btn-primary">Crear</button>
-            </div>
-
-            <div id="routeBuilder" style="margin-top:8px; border:1px dashed rgba(255,255,255,0.06); min-height:240px; padding:8px; border-radius:8px;"></div>
-
-            <div style="display:flex;gap:8px;margin-top:8px;">
-              <button id="btnSaveRoute" class="btn btn-primary" style="display:none">Guardar ruta</button>
-              <button id="btnClearRoute" class="btn">Limpiar</button>
-              <button id="btnSendDriver" class="btn" style="display:none">Enviar a chofer</button>
-            </div>
-
-            <div style="margin-top:12px;">
-              <h4>Rutas guardadas</h4>
-              <div id="savedRoutes" style="max-height:180px;overflow:auto;"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CLIENTS -->
-      <section id="page-clients" class="card page hidden">
-        <h3>Clientes</h3>
-        <div style="display:flex;gap:8px;margin-top:8px;"><input id="qClients" placeholder="Buscar..." class="w-full p-2 rounded" /><button id="btnNewClient" class="btn btn-primary">Nuevo</button></div>
-        <div id="clientsArea" style="max-height:520px;overflow:auto;margin-top:8px;"></div>
-      </section>
-
-      <!-- DRIVERS -->
-      <section id="page-drivers" class="card page hidden">
-        <h3>Choferes</h3>
-        <div style="display:flex;gap:8px;margin-top:8px;"><input id="inDriverName" placeholder="Nombre" class="p-2 rounded" /><input id="inDriverPhone" placeholder="Tel" class="p-2 rounded" /><button id="btnAddDriver" class="btn btn-primary">Agregar</button></div>
-        <div id="driversArea" style="max-height:520px;overflow:auto;margin-top:8px;"></div>
-      </section>
-
-      <!-- VEHICLES -->
-      <section id="page-vehicles" class="card page hidden">
-        <h3>Vehículos</h3>
-        <div style="display:flex;gap:8px;margin-top:8px;"><input id="inVehModel" placeholder="Modelo" class="p-2 rounded" /><input id="inVehPlate" placeholder="Patente" class="p-2 rounded" /><button id="btnAddVeh" class="btn btn-primary">Agregar</button></div>
-        <div id="vehiclesArea" style="max-height:520px;overflow:auto;margin-top:8px;"></div>
-      </section>
-
-      <!-- TICKETS -->
-      <section id="page-tickets" class="card page hidden">
-        <h3>Tickets</h3>
-        <div class="muted">Buscar y generar ticket</div>
-        <div style="display:flex;gap:8px;margin-top:8px;"><input id="qTickets" placeholder="Buscar..." class="w-full p-2 rounded" /><button id="btnSearchTicket" class="btn btn-primary">Buscar</button></div>
-        <div id="ticketsArea" style="max-height:420px;overflow:auto;margin-top:8px;"></div>
-      </section>
-
-      <!-- SETTINGS -->
-      <section id="page-settings" class="card page hidden">
-        <h3>Ajustes</h3>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-          <label class="muted">Auto-backup diario</label>
-          <select id="autoBackup" class="p-2 rounded"><option value="0">Desactivado</option><option value="1">Cada día</option></select>
-          <label class="muted">Firebase sync</label>
-          <input id="chkFirebase" type="checkbox" />
-          <button id="btnSetFirebase" class="btn">Configurar Firebase</button>
-        </div>
-
-        <div style="margin-top:12px;">
-          <h4>Backups locales</h4>
-          <div id="backupsList" style="max-height:240px;overflow:auto;"></div>
-          <div style="margin-top:8px;"><button id="btnBackupNow" class="btn">Backup ahora</button></div>
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- Modal -->
-  <div id="modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:60;">
-    <div style="width:820px;max-width:95%;background:var(--card-dark);border-radius:12px;padding:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;"><strong id="modalTitle"></strong><button id="modalClose" class="btn">Cerrar</button></div>
-      <div id="modalBody" style="margin-top:12px"></div>
+<!-- Contenedor Principal de la App (Oculto por defecto) -->
+<div id="app" class="max-w-7xl mx-auto p-4 md:p-8 hidden"> <!-- Ampliado a max-w-7xl para el layout de 3 columnas -->
+<header class="text-center mb-6">
+<!-- Logo/Icono -->
+<div class="mb-2">
+    <div class="flex items-center justify-center h-12 w-12 mx-auto rounded-full bg-primary text-white text-lg font-bold">
+    MG
     </div>
-  </div>
+</div>
+<h1 class="text-3xl font-bold text-gray-800 flex items-center justify-center">
+<span class="color-primary">MG Transporte</span>
+</h1>
+<p class="text-sm text-gray-500 mt-1">Sistema de Viajes Puerta a Puerta</p>
+<!-- Estado de Auth y Botón de Salir -->
+<div class="flex items-center justify-center gap-4 mt-4">
+<div id="auth-status" class="text-center text-xs text-gray-500">Conectando...</div>
+<button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1 px-3 rounded-full btn-feedback">
+Cerrar Sesión
+</button>
+</div>
+</header>
 
-<script defer>
-/* MG Transporte — Simplificado
- - Single file app
- - localStorage (offline) + optional Firebase sync (paste config)
- - Leaflet map planner, tickets (jsPDF), backups (SheetJS)
-*/
+<!-- Mensajes de estado -->
+<div id="status-message" class="hidden p-3 mb-4 text-sm rounded-lg" role="alert"></div>
 
-/* ---------- Helpers & storage keys ---------- */
-const uid = ()=> Math.random().toString(36).slice(2,9).toUpperCase();
-const nowISO = ()=> new Date().toISOString();
-const KEYS = {
-  trips:'mg_v6_trips',
-  drivers:'mg_v6_drivers',
-  vehicles:'mg_v6_vehicles',
-  clients:'mg_v6_clients',
-  routes:'mg_v6_routes',
-  backups:'mg_v6_backups',
-  settings:'mg_v6_settings',
-  queue:'mg_v6_queue'
+<!-- Navegación de Pestañas -->
+<div class="flex border-b border-gray-200 mb-6 text-sm overflow-x-auto">
+<button id="tab-viajes" class="tab-button active flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
+<i data-lucide="ticket" class="w-4 h-4 inline-block mr-1"></i> Tickets de Viaje
+</button>
+<button id="tab-rutas" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
+<i data-lucide="list-checks" class="w-4 h-4 inline-block mr-1"></i> Planificación de Rutas
+</button>
+<button id="tab-clientes" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
+<i data-lucide="contact" class="w-4 h-4 inline-block mr-1"></i> Clientes
+</button>
+<button id="tab-vehiculos" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
+<i data-lucide="car" class="w-4 h-4 inline-block mr-1"></i> Vehículos
+</button>
+<button id="tab-choferes" class="tab-button flex-1 py-3 px-1 text-center text-gray-600 transition duration-150 whitespace-nowrap btn-feedback">
+<i data-lucide="users" class="w-4 h-4 inline-block mr-1"></i> Choferes
+</button>
+</div>
+
+<!-- Contenido Principal (dentro de #app) -->
+<!-- 1. Contenido de VIAJES (Tickets individuales) -->
+<div id="content-viajes" class="tab-content">
+<!-- Formulario de Viaje -->
+<div class="bg-white p-6 rounded-xl shadow-lg mb-6 max-w-3xl mx-auto"> <!-- Centrado y con max-width -->
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Registrar Nuevo Ticket de Viaje</h2>
+<form id="trip-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<input type="hidden" id="editing-trip-id">
+<!-- Cliente y Datos Básicos -->
+<div class="md:col-span-2 grid grid-cols-2 gap-4">
+<div>
+<label class="block text-sm font-medium text-gray-700">Cliente / Pasajero</label>
+<input type="text" id="client-name" placeholder="Nombre completo" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Teléfono del cliente</label>
+<input type="text" id="client-phone" placeholder="Teléfono (clave para guardar cliente)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+</div>
+<!-- Origen (Salida) -->
+<div class="p-3 border rounded-lg bg-red-50 border-red-200">
+<p class="font-bold text-red-700 text-sm mb-2">SALIDA (Origen)</p>
+<label class="block text-xs font-medium text-gray-700">Dirección Salida</label>
+<input type="text" id="address-origin" placeholder="Dirección" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<label class="block text-xs font-medium text-gray-700 mt-2">Localidad Salida</label>
+<input type="text" id="locality-origin" placeholder="Localidad" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+
+<!-- Destino -->
+<div class="p-3 border rounded-lg bg-green-50 border-green-200">
+<p class="font-bold text-green-700 text-sm mb-2">DESTINO</p>
+<label class="block text-xs font-medium text-gray-700">Dirección Destino</label>
+<input type="text" id="address-dest" placeholder="Dirección" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<label class="block text-xs font-medium text-gray-700 mt-2">Localidad Destino</label>
+<input type="text" id="locality-dest" placeholder="Localidad" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+
+<!-- Fecha, Hora y Precio -->
+<div>
+<label class="block text-sm font-medium text-gray-700">Fecha de viaje</label>
+<input type="date" id="trip-date" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Hora Aprox.</label>
+<input type="time" id="trip-time" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+
+<!-- Pasajeros y Mascotas -->
+<div class="md:col-span-2 grid grid-cols-3 gap-4">
+<div>
+<label class="block text-sm font-medium text-gray-700">Pasajeros</label>
+<input type="number" id="trip-passengers" value="1" min="1" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Mascotas (Cant)</label>
+<input type="number" id="trip-pets" value="0" min="0" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Tamaño Mascota</label>
+<select id="trip-pet-size" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary">
+<option value="ninguno">Ninguno</option>
+<option value="<5kg">Pequeño (&lt;5kg)</option>
+<option value=">5kg">Grande (&gt;5kg)</option>
+</select>
+</div>
+</div>
+
+<div class="md:col-span-2">
+<label class="block text-sm font-medium text-gray-700">Precio Final</label>
+<input type="number" id="trip-price" placeholder="Precio final del viaje" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+
+<div class="md:col-span-2 mt-4 flex space-x-3">
+<button type="submit" id="save-trip-btn" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 flex items-center justify-center btn-feedback">
+<i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i> Registrar Ticket
+</button>
+<button type="button" id="cancel-edit-btn" class="w-1/3 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 rounded-xl transition duration-150 hidden btn-feedback">
+Cancelar Edición
+</button>
+</div>
+</form>
+</div>
+
+<!-- Listado de Viajes (Boletos) con Sub-Pestañas -->
+<div class="bg-white p-6 rounded-xl shadow-lg max-w-5xl mx-auto"> <!-- Centrado y con max-width -->
+<!-- Sub-pestañas -->
+<div class="flex border-b border-gray-200 mb-4">
+<button id="sub-tab-activos" class="sub-tab-button active btn-feedback">
+<i data-lucide="activity" class="w-4 h-4 inline-block mr-1"></i> Activos
+</button>
+<button id="sub-tab-finalizados" class="sub-tab-button btn-feedback">
+<i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> Finalizados
+</button>
+</div>
+
+<!-- Contenido Pestaña Activos -->
+<div id="content-activos" class="sub-tab-content">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Tickets Pendientes y Asignados</h2>
+<div id="trips-list-active" class="space-y-4">
+<p class="text-center text-gray-500" id="loading-trips-active">Cargando tickets activos...</p>
+</div>
+</div>
+
+<!-- Contenido Pestaña Finalizados -->
+<div id="content-finalizados" class="sub-tab-content hidden">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Tickets Finalizados</h2>
+<div id="trips-list-finished" class="space-y-4">
+<p class="text-center text-gray-500" id="loading-trips-finished">Cargando tickets finalizados...</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 2. Contenido de RUTAS (Planificación) -->
+<div id="content-rutas" class="tab-content hidden">
+<!-- Sub-pestañas de Rutas -->
+<div class="flex border-b border-gray-200 mb-4">
+<button id="sub-tab-rutas-crear" class="sub-tab-button active btn-feedback">
+<i data-lucide="plus-square" class="w-4 h-4 inline-block mr-1"></i> Rutas Creadas
+</button>
+<button id="sub-tab-rutas-asignar" class="sub-tab-button btn-feedback">
+<i data-lucide="arrow-left-right" class="w-4 h-4 inline-block mr-1"></i> Asignación de Viajes
+</button>
+</div>
+
+<!-- Contenido Pestaña 1: Crear Rutas y Ver Listas -->
+<div id="content-rutas-crear" class="sub-tab-content">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Columna 1: Crear/Editar Ruta -->
+<div>
+<div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
+<h2 class="text-xl font-semibold mb-4 text-gray-700" id="route-form-title">Crear Nueva Ruta</h2>
+<form id="route-form">
+<input type="hidden" id="editing-route-id">
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-700">Asignar Chofer</label>
+<select id="route-driver-id" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<option value="">-- Seleccionar Chofer --</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Asignar Vehículo</label>
+<select id="route-vehicle-id" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+<option value="">-- Seleccionar Vehículo --</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Fecha de Ruta</label>
+<input type="date" id="route-date" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+</div>
+<div class="mt-6 space-y-3">
+<button type="submit" id="save-route-btn" class="w-full bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center btn-feedback">
+<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Guardar Ruta
+</button>
+<button type="button" id="cancel-route-edit-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 rounded-xl transition duration-150 flex items-center justify-center btn-feedback hidden">
+Cancelar Edición
+</button>
+</div>
+</form>
+</div>
+</div>
+<!-- Columna 2: Listas de Rutas Activas/Finalizadas -->
+<div>
+<div class="bg-white p-6 rounded-xl shadow-lg">
+<!-- Sub-pestañas (anidadas) -->
+<div class="flex border-b border-gray-200 mb-4">
+<button id="sub-tab-rutas-activas" class="sub-tab-button active btn-feedback">
+<i data-lucide="activity" class="w-4 h-4 inline-block mr-1"></i> Activas
+</button>
+<button id="sub-tab-rutas-finalizadas" class="sub-tab-button btn-feedback">
+<i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> Finalizadas
+</button>
+</div>
+<div id="content-rutas-activas" class="sub-tab-content">
+<h3 class="font-semibold text-gray-700 mb-3">Rutas Activas</h3>
+<div id="active-routes-list" class="space-y-3 max-h-96 overflow-y-auto">
+<p class="text-center text-xs text-gray-400" id="loading-routes-active">Cargando rutas activas...</p>
+</div>
+</div>
+<div id="content-rutas-finalizadas" class="sub-tab-content hidden">
+<h3 class="font-semibold text-gray-700 mb-3">Rutas Finalizadas</h3>
+<div id="finished-routes-list" class="space-y-3 max-h-96 overflow-y-auto">
+<p class="text-center text-xs text-gray-400" id="loading-routes-finished">Cargando rutas finalizadas...</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Contenido Pestaña 2: Asignación de Viajes (Nuevo Layout) -->
+<div id="content-rutas-asignar" class="sub-tab-content hidden">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Columna Izquierda: Tickets Pendientes -->
+<div class="lg:col-span-1">
+<div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
+<h3 class="font-semibold text-gray-700 mb-4 flex items-center">
+<i data-lucide="package-open" class="w-4 h-4 mr-2 color-accent"></i> Tickets Pendientes
+</h3>
+<p id="pending-trips-guide" class="text-xs text-center text-gray-500 mb-3 p-2 bg-yellow-50 rounded-md">
+↓ 1. Haz clic en una ruta de la derecha para seleccionarla.
+</p>
+<div id="pending-trips-list" class="space-y-3 max-h-[60vh] overflow-y-auto">
+<p class="text-center text-gray-500 text-sm" id="loading-pending-trips">Cargando tickets pendientes...</p>
+<!-- Los tickets pendientes se renderizarán aquí -->
+</div>
+</div>
+</div>
+<!-- Columna Derecha: Ruta Seleccionada -->
+<div class="lg:col-span-1">
+<div class="bg-white p-6 rounded-xl shadow-lg sticky top-4">
+<h2 class="text-xl font-semibold mb-4 text-gray-700 flex justify-between items-center">
+Ruta Seleccionada
+</h2>
+<div id="route-planner-guide" class="text-center text-gray-500 p-4 border border-dashed rounded-lg">
+<p class="font-semibold mb-2">Paso 1: Selecciona una Ruta</p>
+<p class="text-sm">Ve a "Rutas Creadas", haz clic en "Planificar esta Ruta" en una ruta activa.</p>
+</div>
+<div id="current-route-planner-container" class="hidden">
+<!-- Los detalles de la ruta seleccionada y sus tramos aparecerán aquí -->
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<!-- 3. Contenido de CLIENTES -->
+<div id="content-clientes" class="tab-content hidden">
+<div class="bg-white p-6 rounded-xl shadow-lg max-w-3xl mx-auto">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Listado de Clientes</h2>
+<div class="mb-4">
+<input type="text" id="customer-search" placeholder="Buscar cliente por nombre o teléfono..." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary">
+</div>
+<div id="customers-list" class="space-y-4">
+<p class="text-center text-gray-500" id="loading-customers">Cargando clientes...</p>
+</div>
+</div>
+</div>
+
+
+<!-- 4. Contenido de VEHÍCULOS (Autos) -->
+<div id="content-vehiculos" class="tab-content hidden">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Formulario de Vehículo -->
+<div class="bg-white p-6 rounded-xl shadow-lg">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Registrar Nuevo Vehículo</h2>
+<form id="vehicle-form" class="grid grid-cols-1 gap-4">
+<div>
+<label class="block text-sm font-medium text-gray-700">Modelo</label>
+<input type="text" id="vehicle-model" placeholder="Ej: Renault Trafic" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Color</label>
+<input type="text" id="vehicle-color" placeholder="Ej: Blanco" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Patente / Matrícula</label>
+<input type="text" id="vehicle-plate" placeholder="Ej: ABC 123 (Único)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div class="mt-4">
+<button type="submit" class="w-full bg-accent hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-yellow-200/50 flex items-center justify-center btn-feedback">
+<i data-lucide="car-front" class="w-5 h-5 mr-2"></i> Guardar Vehículo
+</button>
+</div>
+</form>
+</div>
+<!-- Listado de Vehículos -->
+<div class="bg-white p-6 rounded-xl shadow-lg">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Vehículos Registrados</h2>
+<div id="vehicles-list" class="space-y-4 max-h-96 overflow-y-auto">
+<p class="text-center text-gray-500" id="loading-vehicles">Cargando vehículos...</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 5. Contenido de CHOFERES -->
+<div id="content-choferes" class="tab-content hidden">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Formulario de Chofer -->
+<div class="bg-white p-6 rounded-xl shadow-lg">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Agregar Nuevo Chofer</h2>
+<form id="driver-form" class="grid grid-cols-1 gap-4">
+<div>
+<label class="block text-sm font-medium text-gray-700">Nombre completo</label>
+<input type="text" id="driver-name" placeholder="Ej: Juan Pérez" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">DNI</label>
+<input type="text" id="driver-dni" placeholder="DNI del chofer" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700">Teléfono</label>
+<input type="text" id="driver-phone" placeholder="Teléfono de contacto" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-4 ring-accent focus:border-primary" required>
+</div>
+<div class="mt-4">
+<button type="submit" class="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-3 rounded-xl transition duration-150 shadow-lg shadow-purple-200/50 flex items-center justify-center btn-feedback">
+<i data-lucide="user-plus" class="w-5 h-5 mr-2"></i> Guardar Chofer
+</button>
+</div>
+</form>
+</div>
+<!-- Listado de Choferes -->
+<div class="bg-white p-6 rounded-xl shadow-lg">
+<h2 class="text-xl font-semibold mb-4 text-gray-700">Choferes Activos</h2>
+<div id="drivers-list" class="space-y-4 max-h-96 overflow-y-auto">
+<p class="text-center text-gray-500" id="loading-drivers">Cargando choferes...</p>
+</div>
+</div>
+</div>
+</div>
+<!-- ... Fin del contenido de las pestañas ... -->
+
+<!-- Modal para Generación de Ticket -->
+<div id="ticket-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+<!-- Contenido del modal... -->
+<div class="bg-gray-100 p-6 rounded-xl shadow-2xl max-w-2xl w-full transform transition-all max-h-[90vh] flex flex-col">
+<!-- Encabezado (No se encoge) -->
+<div class="flex justify-between items-center mb-4 flex-shrink-0">
+<h3 class="text-xl font-bold text-gray-800 flex items-center">
+<i data-lucide="file-text" class="w-6 h-6 mr-2 color-accent"></i> Ticket Generado
+</h3>
+<button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 btn-feedback">
+<i data-lucide="x" class="w-6 h-6"></i>
+</button>
+</div>
+
+<!-- Pestañas de Ticket (No se encoge) -->
+<div class="flex border-b border-gray-300 mb-4 flex-shrink-0">
+<button id="modal-tab-client" class="modal-tab-button active flex-1 py-2 px-1 text-center text-gray-600 text-sm transition duration-150 btn-feedback">Mensaje Cliente</button>
+<button id="modal-tab-driver" class="modal-tab-button flex-1 py-2 px-1 text-center text-gray-600 text-sm transition duration-150 btn-feedback">Ticket Receptoría</button>
+</div>
+
+<!-- Contenido del ticket (Esta área se scrollea) -->
+<div id="printable-area" class="overflow-y-auto">
+<div id="modal-content-client" class="modal-tab-content">
+<!-- El HTML del ticket del cliente se inyectará aquí -->
+</div>
+<div id="modal-content-driver" class="modal-tab-content hidden">
+<!-- El HTML del ticket del chofer se inyectará aquí -->
+</div>
+</div>
+
+<!-- Acciones del Modal (No se encoge) -->
+<div class="mt-6 pt-4 border-t border-gray-300 flex flex-wrap gap-2 modal-actions-no-print flex-shrink-0">
+<button id="print-ticket-btn" class="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
+<i data-lucide="printer" class="w-4 h-4 mr-2"></i> Imprimir
+</button>
+<button id="share-whatsapp-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
+<i data-lucide="message-circle" class="w-4 h-4 mr-2"></i> WhatsApp
+</button>
+<button id="share-email-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
+<i data-lucide="mail" class="w-4 h-4 mr-2"></i> Email
+</button>
+<button id="copy-message-btn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-lg flex items-center text-sm btn-feedback">
+<i data-lucide="copy" class="w-4 h-4 mr-2"></i> Copiar Texto
+</button>
+</div>
+</div>
+</div>
+<!-- Fin del Modal -->
+
+</div> <!-- Fin del div #app -->
+
+<!-- FIREBASE y SCRIPTS JS -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// CORREGIDO: Importar funciones de persistencia
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, addDoc, onSnapshot, collection, query, where, updateDoc, serverTimestamp, deleteDoc, setLogLevel, getDocs, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Establecer nivel de log para depuración
+setLogLevel('debug');
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCz0aIhuv1OPK8jZ5fXGKQBTkJKHvreQyA",
+  authDomain: "mgtransporte-app.firebaseapp.com",
+  projectId: "mgtransporte-app",
+  storageBucket: "mgtransporte-app.firebasestorage.app",
+  messagingSenderId: "594258427469",
+  appId: "1:594258427469:web:72b14842b84ec850e36604",
+  measurementId: "G-99FBYQ4SJD"
 };
-const read = k => JSON.parse(localStorage.getItem(k) || '[]');
-const write = (k,v) => localStorage.setItem(k, JSON.stringify(v));
 
-/* state */
-let trips = read(KEYS.trips);
-let drivers = read(KEYS.drivers);
-let vehicles = read(KEYS.vehicles);
-let clients = read(KEYS.clients);
-let routes = read(KEYS.routes);
-let backups = read(KEYS.backups);
-let queue = read(KEYS.queue);
-let settings = JSON.parse(localStorage.getItem(KEYS.settings) || JSON.stringify({ theme:'dark', autoBackup:1, firebaseEnabled:false, firebaseConfig:{} }));
 
-/* DOM refs */
-const pages = document.querySelectorAll('.nav button');
-const pageTitle = document.getElementById('pageTitle'), pageSub = document.getElementById('pageSub');
-const themeToggle = document.getElementById('themeToggle');
-const syncStatus = document.getElementById('syncStatus'), backupCount = document.getElementById('backupCount');
+let db, auth, userId = null; // userId empieza como null
+let detachListeners = []; // Array para guardar funciones para detener listeners
+let driversData = [], vehiclesData = [], customersData = [], currentRouteData = null, allTripsData = [], allRoutesData = [];
+let currentlyEditingTripId = null, currentlyEditingRouteId = null;
+let modalTicketData = { client: { html: '', text: '' }, driver: { html: '', text: '' } };
 
-const inClient = document.getElementById('inClient'), inPhone = document.getElementById('inPhone'), inOrigin = document.getElementById('inOrigin'), inOriginLocal = document.getElementById('inOriginLocal'), inDest = document.getElementById('inDest'), inDestLocal = document.getElementById('inDestLocal'), inDate = document.getElementById('inDate'), inTime = document.getElementById('inTime'), inPrice = document.getElementById('inPrice'), inPax = document.getElementById('inPax'), inPet = document.getElementById('inPet'), inMinors = document.getElementById('inMinors'), inService = document.getElementById('inService'), inNotes = document.getElementById('inNotes');
-const btnSaveTrip = document.getElementById('btnSaveTrip'), btnResetForm = document.getElementById('btnResetForm');
-const tbodyTrips = document.getElementById('tbodyTrips'), qTrips = document.getElementById('qTrips'), filterState = document.getElementById('filterState');
+const statusMessageEl = document.getElementById('status-message');
+const authStatusEl = document.getElementById('auth-status');
+const loginContainer = document.getElementById('login-container');
+const appContainer = document.getElementById('app');
+const loginForm = document.getElementById('login-form');
+const loginErrorEl = document.getElementById('login-error');
+const loginBtn = document.getElementById('login-btn');
+const loginBtnText = document.getElementById('login-btn-text');
+const loginSpinner = document.getElementById('login-spinner');
+const logoutBtn = document.getElementById('logout-btn');
 
-const pendingList = document.getElementById('pendingList'), routeBuilder = document.getElementById('routeBuilder'), mapEl = document.getElementById('mapPlanner');
-const selDriver = document.getElementById('selDriver'), selVehicle = document.getElementById('selVehicle'), selRouteDate = document.getElementById('selRouteDate'), btnCreateRoute = document.getElementById('btnCreateRoute'), btnSaveRoute = document.getElementById('btnSaveRoute'), btnClearRoute = document.getElementById('btnClearRoute'), btnSendDriver = document.getElementById('btnSendDriver'), savedRoutes = document.getElementById('savedRoutes');
 
-const inDriverName = document.getElementById('inDriverName'), inDriverPhone = document.getElementById('inDriverPhone'), btnAddDriver = document.getElementById('btnAddDriver'), driversArea = document.getElementById('driversArea');
-const inVehModel = document.getElementById('inVehModel'), inVehPlate = document.getElementById('inVehPlate'), btnAddVeh = document.getElementById('btnAddVeh'), vehiclesArea = document.getElementById('vehiclesArea');
-
-const qTickets = document.getElementById('qTickets'), btnSearchTicket = document.getElementById('btnSearchTicket'), ticketsArea = document.getElementById('ticketsArea');
-
-const btnExportPlan = document.getElementById('btnExportPlan'), btnExportJSON = document.getElementById('btnExportJSON'), btnImportJSON = document.getElementById('btnImportJSON');
-const modal = document.getElementById('modal'), modalTitle = document.getElementById('modalTitle'), modalBody = document.getElementById('modalBody'), modalClose = document.getElementById('modalClose');
-
-const btnOptimize = document.getElementById('btnOptimize');
-const btnSetFirebase = document.getElementById('btnSetFirebase'), chkFirebase = document.getElementById('chkFirebase'), autoBackup = document.getElementById('autoBackup'), btnBackupNow = document.getElementById('btnBackupNow'), backupsList = document.getElementById('backupsList');
-
-/* map */
-let map=null, markersLayer=null, poly=null, nominatimCache={};
-function initMap(){
-  try{
-    map = L.map(mapEl).setView([-34.61,-58.37], 8);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap' }).addTo(map);
-    markersLayer = L.layerGroup().addTo(map);
-    poly = L.polyline([], { color:'#06b6d4', weight:4 }).addTo(map);
-  }catch(e){ console.warn('map init', e); }
-}
-initMap();
-
-/* geocode with cache */
-async function geocode(address){
-  if(!address) return null;
-  const key = address.trim().toLowerCase();
-  if(nominatimCache[key]) return nominatimCache[key];
-  try{
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`, { headers:{ 'Accept-Language':'es' }});
-    if(!res.ok) return null;
-    const data = await res.json();
-    if(!data || !data.length) return null;
-    const p = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-    nominatimCache[key]=p; return p;
-  }catch(e){ console.warn('geocode', e); return null; }
+// --- Funciones de Utilidad y UI ---
+function showStatus(message, type = 'success') {
+    statusMessageEl.textContent = message;
+    statusMessageEl.className = `p-3 mb-4 text-sm rounded-lg ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+    statusMessageEl.classList.remove('hidden');
+    setTimeout(() => statusMessageEl.classList.add('hidden'), 5000);
 }
 
-/* ---------- UI helpers ---------- */
-function applyTheme(t){ document.body.setAttribute('data-theme', t); settings.theme = t; localStorage.setItem(KEYS.settings, JSON.stringify(settings)); }
-themeToggle.addEventListener('click', ()=> applyTheme(document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
-applyTheme(settings.theme || 'dark');
-
-pages.forEach(btn => btn.addEventListener('click', ()=> {
-  pages.forEach(b=> b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.page').forEach(p=> p.classList.add('hidden'));
-  const id = btn.dataset.page; document.getElementById(id).classList.remove('hidden');
-  const titleMap = { 'page-trips':['Viajes','Crear y listar viajes'], 'page-plan':['Planificar','Asignar viajes a rutas'], 'page-clients':['Clientes','Gestionar clientes'], 'page-drivers':['Choferes','Gestión de choferes'], 'page-vehicles':['Vehículos','Gestión de vehículos'], 'page-tickets':['Tickets','Generar tickets'], 'page-settings':['Ajustes','Backups y sync'] };
-  const info = titleMap[id] || ['MG',''];
-  pageTitle.textContent = info[0]; pageSub.textContent = info[1];
-}));
-
-/* persist */
-function persistAll(){ write(KEYS.trips,trips); write(KEYS.drivers,drivers); write(KEYS.vehicles,vehicles); write(KEYS.clients,clients); write(KEYS.routes,routes); write(KEYS.backups,backups); write(KEYS.queue, queue); document.getElementById('backupCount').textContent = backups.length; }
-
-/* ---------- Renders ---------- */
-function formatMoney(v){ return `$ ${Number(v||0).toFixed(2)}`; }
-function esc(s){ if(s===undefined||s===null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-
-/* trips table */
-function renderTrips(){
-  tbodyTrips.innerHTML = '';
-  const q = (qTrips.value||'').toLowerCase();
-  const state = filterState.value;
-  const arr = trips.filter(t=> (state==='all' || (t.status||'Activo') === state) && (!q || (t.clientName||'').toLowerCase().includes(q) || (t.localityOrigin||'').toLowerCase().includes(q))).sort((a,b)=> ((a.date||'')+' '+(a.time||'')).localeCompare((b.date||'')+' '+(b.time||'')));
-  if(!arr.length){ tbodyTrips.innerHTML = '<tr><td colspan="6" class="muted">No hay viajes</td></tr>'; return; }
-  arr.forEach(t=>{
-    const status = t.status==='Finalizado' ? `<span class="status status-fin">Finalizado</span>` : (t.isAssigned ? `<span class="status status-asig">Asignado</span>` : `<span class="status status-pend">Pendiente</span>`);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${esc(t.clientName)}</strong><div class="muted">${esc(t.phone)}</div></td>
-      <td>${esc(t.localityOrigin)} ${esc(t.addressOrigin)} → ${esc(t.localityDest)} ${esc(t.addressDest)}</td>
-      <td>${esc(t.date)} ${esc(t.time)}</td>
-      <td><strong>${formatMoney(t.price)}</strong></td>
-      <td>${status}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-edit" data-id="${t.id}">Editar</button>
-        <button class="btn btn-ghost btn-ticket" data-id="${t.id}">Ticket</button>
-        ${t.status!=='Finalizado'? `<button class="btn btn-ghost btn-finish" data-id="${t.id}">Finalizar</button>` : `<button class="btn btn-ghost btn-reopen" data-id="${t.id}">Reabrir</button>`}
-        ${!t.isAssigned ? `<button class="btn btn-ghost btn-assign" data-id="${t.id}">Asignar</button>` : `<button class="btn btn-ghost btn-unassign" data-id="${t.id}">Desasignar</button>`}
-      </td>`;
-    tbodyTrips.appendChild(tr);
-  });
-  // attach handlers
-  document.querySelectorAll('.btn-edit').forEach(b=> b.onclick = e=> openEditTrip(e.currentTarget.dataset.id));
-  document.querySelectorAll('.btn-ticket').forEach(b=> b.onclick = e=> openTicketOptions(e.currentTarget.dataset.id));
-  document.querySelectorAll('.btn-finish').forEach(b=> b.onclick = e=> finalizeTrip(e.currentTarget.dataset.id));
-  document.querySelectorAll('.btn-reopen').forEach(b=> b.onclick = e=> reopenTrip(e.currentTarget.dataset.id));
-  document.querySelectorAll('.btn-assign').forEach(b=> b.onclick = e=> addTripToRoute(e.currentTarget.dataset.id));
-  document.querySelectorAll('.btn-unassign').forEach(b=> b.onclick = e=> unassignTrip(e.currentTarget.dataset.id));
+function formatPrice(number) {
+    if (number === undefined || number === null) return 'N/A';
+    return `$ ${Number(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
 
-/* pending list */
-function renderPending(){
-  pendingList.innerHTML = '';
-  const arr = trips.filter(t=> !t.isAssigned && (t.status||'Activo') !== 'Finalizado').sort((a,b)=> ((a.date||'')+' '+(a.time||'')).localeCompare((b.date||'')+' '+(b.time||'')));
-  if(!arr.length){ pendingList.innerHTML = '<div class="muted">No hay viajes pendientes</div>'; return; }
-  arr.forEach(t=>{
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px'; div.draggable = true; div.dataset.tripId = t.id;
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(t.clientName)}</strong><div class="muted small">${esc(t.localityOrigin)}→${esc(t.localityDest)} · ${esc(t.date)} ${esc(t.time)}</div></div><div style="text-align:right"><div><strong>${formatMoney(t.price)}</strong></div><div style="display:flex;gap:6px;margin-top:6px;"><button class="btn btn-ghost btn-add" data-id="${t.id}">Agregar</button><button class="btn btn-ghost btn-edit-small" data-id="${t.id}">✎</button></div></div></div>`;
-    pendingList.appendChild(div);
-  });
-  pendingList.querySelectorAll('.btn-add').forEach(b=> b.onclick = e=> addTripToRoute(e.currentTarget.dataset.id));
-  pendingList.querySelectorAll('.btn-edit-small').forEach(b=> b.onclick = e=> openEditTrip(e.currentTarget.dataset.id));
-  if(window.pendingSortable) window.pendingSortable.destroy();
-  window.pendingSortable = Sortable.create(pendingList, { group:{ name:'shared', pull:'clone', put:false }, sort:false, animation:150 });
+// --- LÓGICA DE PESTAÑAS (PRINCIPALES Y SUB-PESTAÑAS) ---
+function setupTabs() {
+    // Pestañas Principales
+    const tabs = {
+        'tab-viajes': 'content-viajes',
+        'tab-rutas': 'content-rutas',
+        'tab-clientes': 'content-clientes',
+        'tab-vehiculos': 'content-vehiculos',
+        'tab-choferes': 'content-choferes'
+    };
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            
+            button.classList.add('active');
+            const contentId = tabs[button.id];
+            if (contentId) {
+                const contentEl = document.getElementById(contentId);
+                if (contentEl) {
+                    contentEl.classList.remove('hidden');
+                }
+            }
+            // Si hacemos clic en la pestaña principal de Rutas, por defecto mostramos la sub-pestaña 'Crear'
+            if (button.id === 'tab-rutas') {
+                document.getElementById('content-rutas-crear').classList.remove('hidden');
+                document.getElementById('sub-tab-rutas-crear').classList.add('active');
+                document.getElementById('content-rutas-asignar').classList.add('hidden');
+                document.getElementById('sub-tab-rutas-asignar').classList.remove('active');
+            }
+            lucide.createIcons();
+        });
+    });
+    // Activar primera pestaña por defecto (solo si ya está logueado)
+    if (userId) {
+        document.getElementById('content-viajes')?.classList.remove('hidden');
+        document.getElementById('tab-viajes')?.classList.add('active');
+    }
+
+    // Sub-Pestañas (Viajes)
+    document.getElementById('sub-tab-activos')?.addEventListener('click', () => {
+        document.getElementById('content-activos').classList.remove('hidden');
+        document.getElementById('content-finalizados').classList.add('hidden');
+        document.getElementById('sub-tab-activos').classList.add('active');
+        document.getElementById('sub-tab-finalizados').classList.remove('active');
+    });
+    document.getElementById('sub-tab-finalizados')?.addEventListener('click', () => {
+        document.getElementById('content-activos').classList.add('hidden');
+        document.getElementById('content-finalizados').classList.remove('hidden');
+        document.getElementById('sub-tab-activos').classList.remove('active');
+        document.getElementById('sub-tab-finalizados').classList.add('active');
+    });
+
+    // Sub-Pestañas (Rutas) - Pestaña Principal de Planificación
+    document.getElementById('sub-tab-rutas-crear')?.addEventListener('click', () => {
+        document.getElementById('content-rutas-crear').classList.remove('hidden');
+        document.getElementById('content-rutas-asignar').classList.add('hidden');
+        document.getElementById('sub-tab-rutas-crear').classList.add('active');
+        document.getElementById('sub-tab-rutas-asignar').classList.remove('active');
+    });
+    document.getElementById('sub-tab-rutas-asignar')?.addEventListener('click', () => {
+        document.getElementById('content-rutas-crear').classList.add('hidden');
+        document.getElementById('content-rutas-asignar').classList.remove('hidden');
+        document.getElementById('sub-tab-rutas-crear').classList.remove('active');
+        document.getElementById('sub-tab-rutas-asignar').classList.add('active');
+        // Al entrar a asignar, renderizar las listas
+        renderPendingTripsList();
+        // CORREGIDO: Eliminar la llamada a la función que no existe
+        // renderActiveRoutesForPlanner(); 
+    });
+
+    // Sub-Pestañas (Anidadas en Rutas Creadas)
+    document.getElementById('sub-tab-rutas-activas')?.addEventListener('click', () => {
+        document.getElementById('content-rutas-activas').classList.remove('hidden');
+        document.getElementById('content-rutas-finalizadas').classList.add('hidden');
+        document.getElementById('sub-tab-rutas-activas').classList.add('active');
+        document.getElementById('sub-tab-rutas-finalizadas').classList.remove('active');
+    });
+    document.getElementById('sub-tab-rutas-finalizadas')?.addEventListener('click', () => {
+        document.getElementById('content-rutas-activas').classList.add('hidden');
+        document.getElementById('content-rutas-finalizadas').classList.remove('hidden');
+        document.getElementById('sub-tab-rutas-activas').classList.remove('active');
+        document.getElementById('sub-tab-rutas-finalizadas').classList.add('active');
+    });
 }
 
-/* drivers/vehicles/clients renders */
-function renderDrivers(){
-  driversArea.innerHTML = ''; selDriver.innerHTML = '<option value="">-- Seleccionar --</option>';
-  if(!drivers.length){ driversArea.innerHTML = '<div class="muted">Sin choferes</div>'; return; }
-  drivers.forEach(d=>{
-    selDriver.innerHTML += `<option value="${d.id}">${esc(d.name)}</option>`;
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(d.name)}</strong><div class="muted">${esc(d.phone)}</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-edit-driver" data-id="${d.id}">Editar</button><button class="btn btn-ghost btn-del-driver" data-id="${d.id}">Eliminar</button></div></div>`;
-    driversArea.appendChild(div);
-  });
-  driversArea.querySelectorAll('.btn-edit-driver').forEach(b=> b.onclick = e=> editDriver(e.currentTarget.dataset.id));
-  driversArea.querySelectorAll('.btn-del-driver').forEach(b=> b.onclick = e=> deleteDriver(e.currentTarget.dataset.id));
-}
-function renderVehicles(){
-  vehiclesArea.innerHTML = ''; selVehicle.innerHTML = '<option value="">-- Seleccionar --</option>';
-  if(!vehicles.length){ vehiclesArea.innerHTML = '<div class="muted">Sin vehículos</div>'; return; }
-  vehicles.forEach(v=>{
-    selVehicle.innerHTML += `<option value="${v.id}">${esc(v.model)} (${esc(v.plate)})</option>`;
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(v.model)}</strong><div class="muted">${esc(v.plate)}</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-edit-veh" data-id="${v.id}">Editar</button><button class="btn btn-ghost btn-del-veh" data-id="${v.id}">Eliminar</button></div></div>`;
-    vehiclesArea.appendChild(div);
-  });
-  vehiclesArea.querySelectorAll('.btn-edit-veh').forEach(b=> b.onclick = e=> editVehicle(e.currentTarget.dataset.id));
-  vehiclesArea.querySelectorAll('.btn-del-veh').forEach(b=> b.onclick = e=> deleteVehicle(e.currentTarget.dataset.id));
-}
-function renderClients(){
-  clientsArea.innerHTML = '';
-  if(!clients.length){ clientsArea.innerHTML = '<div class="muted">Sin clientes</div>'; return; }
-  clients.forEach(c=>{
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(c.name)}</strong><div class="muted">${esc(c.phone)}</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-edit-client" data-id="${c.id}">Editar</button><button class="btn btn-ghost btn-del-client" data-id="${c.id}">Eliminar</button></div></div>`;
-    clientsArea.appendChild(div);
-  });
-  clientsArea.querySelectorAll('.btn-edit-client').forEach(b=> b.onclick = e=> editClient(e.currentTarget.dataset.id));
-  clientsArea.querySelectorAll('.btn-del-client').forEach(b=> b.onclick = e=> deleteClient(e.currentTarget.dataset.id));
+// --- INICIALIZACIÓN DE FIREBASE ---
+try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    console.log("Firebase inicializado correctamente.");
+
+    // **NUEVO: Establecer persistencia de sesión LOCAL**
+    setPersistence(auth, browserLocalPersistence)
+        .then(() => {
+            console.log("Persistencia de sesión establecida en 'local'.");
+            // Ahora que la persistencia está configurada, adjuntamos el listener principal
+            setupAuthListener();
+        })
+        .catch((error) => {
+            console.error("Error al establecer la persistencia:", error);
+            // Continuar igualmente, pero la sesión podría no persistir
+            setupAuthListener();
+        });
+
+} catch (error) {
+    console.error("Error Crítico al inicializar Firebase:", error);
+    authStatusEl.textContent = `❌ Error CRÍTICO de inicialización. Revisa la consola y la config.`;
+    showStatus('Error CRÍTICO al conectar con Firebase. Revisa la configuración.', 'error');
+    // Detener ejecución si la inicialización falla
+    throw error;
 }
 
-/* routes render */
-function renderSavedRoutes(){
-  savedRoutes.innerHTML = '';
-  if(!routes.length){ savedRoutes.innerHTML = '<div class="muted">No hay rutas guardadas.</div>'; return; }
-  routes.forEach(r=>{
-    const drv = drivers.find(d=> d.id===r.driverId), veh = vehicles.find(v=> v.id===r.vehicleId);
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(drv?.name||'Sin chofer')}</strong><div class="muted">${esc(veh?.model||'')} · ${esc(r.date)}</div><div class="muted">Paradas: ${r.stops.length}</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-view-route" data-id="${r.id}">Ver</button><button class="btn btn-ghost btn-del-route" data-id="${r.id}">Eliminar</button></div></div>`;
-    savedRoutes.appendChild(div);
-  });
-  savedRoutes.querySelectorAll('.btn-view-route').forEach(b=> b.onclick = e=> viewRoute(e.currentTarget.dataset.id));
-  savedRoutes.querySelectorAll('.btn-del-route').forEach(b=> b.onclick = e=> deleteRoute(e.currentTarget.dataset.id));
+// --- LÓGICA DE AUTENTICACIÓN ---
+
+function setupAuthListener() {
+    // Escuchar cambios en el estado de autenticación
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Usuario está logueado
+            userId = user.uid;
+            console.log("Usuario logueado:", userId, user.email);
+            authStatusEl.textContent = `✅ Conectado: ${user.email}`;
+            loginContainer.classList.add('hidden'); // Ocultar login
+            appContainer.classList.remove('hidden'); // Mostrar app
+            logoutBtn.classList.remove('hidden');
+
+            // INICIAR LISTENERS DE DATOS (Solo una vez al loguearse)
+            if (detachListeners.length === 0) {
+                initializeDataListeners();
+            }
+            setupTabs(); // Configurar pestañas de la app principal
+            lucide.createIcons(); // Renderizar iconos de la app principal
+
+        } else {
+            // Usuario no está logueado
+            userId = null;
+            console.log("Usuario deslogueado.");
+            authStatusEl.textContent = "Desconectado";
+            loginContainer.classList.remove('hidden'); // Mostrar login
+            appContainer.classList.add('hidden'); // Ocultar app
+            logoutBtn.classList.add('hidden');
+            loginErrorEl.classList.add('hidden'); // Ocultar errores de login previos
+            // No resetear el formulario aquí para permitir que el navegador guarde la contraseña
+            // loginForm.reset(); 
+
+            // DETENER LISTENERS DE DATOS
+            stopDataListeners();
+        }
+    });
 }
 
-/* route builder */
-let currentRoute = null;
-function renderRouteBuilder(){
-  routeBuilder.innerHTML = '';
-  if(!currentRoute){ routeBuilder.innerHTML = '<div class="muted">No hay ruta en construcción</div>'; btnSaveRoute.style.display='none'; btnSendDriver.style.display='none'; return; }
-  if(!currentRoute.stops.length){ routeBuilder.innerHTML = '<div class="muted">Ruta vacía. Agregá viajes</div>'; btnSaveRoute.style.display='none'; btnSendDriver.style.display='none'; return; }
-  currentRoute.stops.forEach(tid=>{
-    const t = trips.find(x=> x.id===tid); if(!t) return;
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px'; div.dataset.id = t.id;
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(t.clientName)}</strong><div class="muted">${esc(t.localityOrigin)}→${esc(t.localityDest)} · ${esc(t.date)} ${esc(t.time)}</div></div><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-up" data-id="${t.id}">▲</button><button class="btn btn-ghost btn-down" data-id="${t.id}">▼</button><button class="btn btn-ghost btn-remove" data-id="${t.id}">Quitar</button></div></div>`;
-    routeBuilder.appendChild(div);
-  });
-  routeBuilder.querySelectorAll('.btn-up').forEach(b=> b.onclick = e=> moveUp(e.currentTarget.dataset.id));
-  routeBuilder.querySelectorAll('.btn-down').forEach(b=> b.onclick = e=> moveDown(e.currentTarget.dataset.id));
-  routeBuilder.querySelectorAll('.btn-remove').forEach(b=> b.onclick = e=> removeFromRoute(e.currentTarget.dataset.id));
-  btnSaveRoute.style.display = 'inline-flex'; btnSendDriver.style.display = 'inline-flex';
+// Manejar envío del formulario de login
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
 
-  if(window.routeSortable) window.routeSortable.destroy();
-  window.routeSortable = Sortable.create(routeBuilder, { group:{ name:'shared', put:true, pull:false }, animation:150, onAdd(evt){ const tid = evt.item.dataset.tripId || evt.item.getAttribute('data-trip-id'); if(tid) addTripToRoute(tid); evt.item.remove(); }, onUpdate(){ currentRoute.stops = Array.from(routeBuilder.children).map(c=> c.dataset.id).filter(Boolean); updateMapForRoute(); } });
-}
+    loginBtn.disabled = true;
+    loginBtnText.classList.add('hidden');
+    loginSpinner.classList.remove('hidden');
+    loginErrorEl.classList.add('hidden');
 
-/* update map for route */
-async function updateMapForRoute(){
-  if(!map || !currentRoute) return;
-  markersLayer.clearLayers(); poly.setLatLngs([]);
-  const coords = [];
-  for(const tid of currentRoute.stops){
-    const t = trips.find(x=> x.id===tid); if(!t) continue;
-    const addr = `${t.addressOrigin} ${t.localityOrigin}`;
-    const p = await geocode(addr);
-    if(p){ coords.push([p.lat,p.lon]); L.marker([p.lat,p.lon]).bindPopup(`<b>${esc(t.clientName)}</b><br>${esc(t.localityOrigin)}→${esc(t.localityDest)}`).addTo(markersLayer); }
-  }
-  if(coords.length){ poly.setLatLngs(coords); try{ map.fitBounds(poly.getBounds().pad(0.4)); }catch(e){} }
-}
-
-/* ---------- CRUD actions ---------- */
-
-/* TRIPS */
-let editingTripId = null;
-btnSaveTrip.addEventListener('click', async ()=>{
-  const data = {
-    clientName: inClient.value.trim(), phone: inPhone.value.trim(),
-    addressOrigin: inOrigin.value.trim(), localityOrigin: inOriginLocal.value.trim(),
-    addressDest: inDest.value.trim(), localityDest: inDestLocal.value.trim(),
-    date: inDate.value, time: inTime.value, price: parseFloat(inPrice.value||0),
-    passengers: parseInt(inPax.value||1), pet: inPet.value, minors: inMinors.value, service: inService.value, notes: inNotes.value
-  };
-  const err = validateTrip(data); if(err){ alert(err); return; }
-  if(editingTripId){ const i = trips.findIndex(x=> x.id===editingTripId); if(i>=0){ trips[i] = { ...trips[i], ...data, updatedAt: nowISO() }; alert('Viaje actualizado'); editingTripId=null; document.getElementById('formMode').textContent='Nuevo'; } }
-  else { trips.unshift({ id: uid(), ...data, isAssigned:false, assignedRouteId:null, status:'Activo', createdAt: nowISO() }); alert('Viaje creado'); }
-  persistAll(); renderAll(); resetForm();
-  maybeQueuePush('trip', data);
+    try {
+        console.log("Intentando iniciar sesión con:", email);
+        await signInWithEmailAndPassword(auth, email, password);
+        console.log("Inicio de sesión exitoso");
+        // onAuthStateChanged se encargará de mostrar la app
+    } catch (error) {
+        console.error("Error de inicio de sesión:", error);
+        let message = "Error al iniciar sesión.";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            message = "Email o contraseña incorrectos.";
+        } else if (error.code === 'auth/invalid-email') {
+            message = "El formato del email no es válido.";
+        } else if (error.code === 'auth/network-request-failed') {
+            message = "Error de red. Verifica tu conexión.";
+        }
+        loginErrorEl.textContent = message;
+        loginErrorEl.classList.remove('hidden');
+    } finally {
+        loginBtn.disabled = false;
+        loginBtnText.classList.remove('hidden');
+        loginSpinner.classList.add('hidden');
+    }
 });
 
-function validateTrip(t){ if(!t.clientName) return 'Nombre obligatorio'; if(!t.phone) return 'Teléfono obligatorio'; if(!t.addressOrigin) return 'Origen obligatorio'; if(!t.addressDest) return 'Destino obligatorio'; if(!t.date) return 'Fecha obligatoria'; if(!t.time) return 'Hora obligatoria'; if(isNaN(t.price)) return 'Precio inválido'; return null; }
-
-function resetForm(){ inClient.value=''; inPhone.value=''; inOrigin.value=''; inOriginLocal.value=''; inDest.value=''; inDestLocal.value=''; inDate.value=''; inTime.value=''; inPrice.value=''; inPax.value='1'; inPet.value='none'; inMinors.value='no'; inService.value='compartido'; inNotes.value=''; editingTripId=null; document.getElementById('formMode').textContent='Nuevo'; }
-
-function openEditTrip(id){
-  const t = trips.find(x=> x.id===id); if(!t) return;
-  editingTripId = id; document.getElementById('formMode').textContent='Editando';
-  inClient.value = t.clientName; inPhone.value = t.phone; inOrigin.value = t.addressOrigin; inOriginLocal.value = t.localityOrigin; inDest.value = t.addressDest; inDestLocal.value = t.localityDest; inDate.value = t.date; inTime.value = t.time; inPrice.value = t.price; inPax.value = t.passengers||1; inPet.value = t.pet||'none'; inMinors.value = t.minors||'no'; inService.value = t.service||'compartido'; inNotes.value = t.notes||'';
-  window.scrollTo({ top:0, behavior:'smooth' });
-}
-
-function finalizeTrip(id){ if(!confirm('Marcar viaje como finalizado?')) return; const t = trips.find(x=> x.id===id); if(!t) return; t.status='Finalizado'; persistAll(); renderAll(); }
-function reopenTrip(id){ if(!confirm('Reabrir viaje?')) return; const t = trips.find(x=> x.id===id); if(!t) return; t.status='Activo'; persistAll(); renderAll(); }
-function unassignTrip(id){ const t = trips.find(x=> x.id===id); if(!t) return; if(!confirm('Desasignar viaje?')) return; t.isAssigned = false; t.assignedRouteId = null; persistAll(); renderAll(); }
-
-/* DRIVER actions */
-document.getElementById('btnAddDriver')?.addEventListener('click', ()=> {
-  const n = inDriverName.value.trim(); const p = inDriverPhone.value.trim();
-  if(!n){ alert('Nombre requerido'); return; }
-  drivers.unshift({ id: uid(), name:n, phone:p, createdAt: nowISO() }); inDriverName.value=''; inDriverPhone.value=''; persistAll(); renderAll();
-});
-function editDriver(id){ const d = drivers.find(x=> x.id===id); if(!d) return; const nn = prompt('Nombre', d.name); if(nn===null) return; const pp = prompt('Tel', d.phone); d.name=nn; d.phone=pp; persistAll(); renderAll(); }
-function deleteDriver(id){ if(!confirm('Eliminar chofer?')) return; drivers = drivers.filter(x=> x.id!==id); persistAll(); renderAll(); }
-
-/* VEHICLES */
-document.getElementById('btnAddVeh')?.addEventListener('click', ()=> {
-  const m = inVehModel.value.trim(); const pl = inVehPlate.value.trim();
-  if(!m || !pl){ alert('Modelo y patente requeridos'); return; }
-  vehicles.unshift({ id: uid(), model:m, plate:pl, createdAt: nowISO() }); inVehModel.value=''; inVehPlate.value=''; persistAll(); renderAll();
-});
-function editVehicle(id){ const v=vehicles.find(x=> x.id===id); if(!v) return; const nm=prompt('Modelo',v.model); if(nm===null) return; const np=prompt('Patente',v.plate); v.model=nm; v.plate=np; persistAll(); renderAll(); }
-function deleteVehicle(id){ if(!confirm('Eliminar vehículo?')) return; vehicles = vehicles.filter(x=> x.id!==id); persistAll(); renderAll(); }
-
-/* CLIENTS */
-document.getElementById('btnNewClient')?.addEventListener('click', ()=> {
-  const name = prompt('Nombre cliente'); if(!name) return; const phone = prompt('Teléfono')||''; clients.unshift({ id: uid(), name, phone, createdAt: nowISO() }); persistAll(); renderAll();
-});
-function editClient(id){ const c=clients.find(x=> x.id===id); if(!c) return; const nn=prompt('Nombre',c.name); if(nn===null) return; const pp=prompt('Tel',c.phone); c.name=nn; c.phone=pp; persistAll(); renderAll(); }
-function deleteClient(id){ if(!confirm('Eliminar cliente?')) return; clients = clients.filter(x=> x.id!==id); persistAll(); renderAll(); }
-
-/* ---------- Routes actions ---------- */
-btnCreateRoute.addEventListener('click', ()=> {
-  const driverId = selDriver.value, vehicleId = selVehicle.value, date = selRouteDate.value;
-  if(!driverId || !vehicleId || !date) return alert('Seleccioná chofer, vehículo y fecha');
-  currentRoute = { id: uid(), driverId, vehicleId, date, stops: [], createdAt: nowISO(), status:'Activa' };
-  renderRouteBuilder(); alert('Ruta creada. Agregá viajes desde la izquierda.');
+// Manejar cierre de sesión
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+        console.log("Cierre de sesión exitoso.");
+        // onAuthStateChanged se encargará de mostrar el login
+    } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+        showStatus("Error al cerrar sesión.", "error");
+    }
 });
 
-function addTripToRoute(tripId){
-  if(!currentRoute){ alert('Crea una ruta primero'); return; }
-  if(currentRoute.stops.includes(tripId)){ alert('Viaje ya agregado'); return; }
-  currentRoute.stops.push(tripId);
-  const t = trips.find(x=> x.id===tripId); if(t){ t.isAssigned=true; }
-  renderRouteBuilder(); renderPending(); updateMapForRoute();
+
+// --- COLECCIONES (Ruta pública/compartida) ---
+// CORREGIDO: Las rutas deben tener un número impar de segmentos
+// 'shared_data' es la colección principal
+// 'data' es el documento único que contiene todas las subcolecciones
+const baseCollectionPath = 'shared_data/data'; // Ruta al DOCUMENTO principal
+
+const VEHICLES_COLLECTION = () => `${baseCollectionPath}/vehicles`; // shared_data/data/vehicles (3 segmentos)
+const DRIVERS_COLLECTION = () => `${baseCollectionPath}/drivers`; // shared_data/data/drivers (3 segmentos)
+const CUSTOMERS_COLLECTION = () => `${baseCollectionPath}/customers`; // shared_data/data/customers (3 segmentos)
+const TRIPS_COLLECTION = () => `${baseCollectionPath}/trips`; // shared_data/data/trips (3 segmentos)
+const ROUTES_COLLECTION = () => `${baseCollectionPath}/routes`; // shared_data/data/routes (3 segmentos)
+
+
+// --- FUNCIONES PARA INICIAR/DETENER LISTENERS ---
+function initializeDataListeners() {
+    console.log("Inicializando listeners de datos...");
+    stopDataListeners(); // Asegurarse de detener listeners previos si existieran
+
+    const listeners = [
+        listenForVehicles,
+        listenForDrivers,
+        listenForCustomers,
+        listenForTrips,
+        listenForRoutes
+    ];
+
+    listeners.forEach(listenerFn => {
+        try {
+            const detach = listenerFn(); // Asumiendo que las funciones ahora devuelven la función onSnapshot
+            if (typeof detach === 'function') {
+                detachListeners.push(detach);
+            }
+        } catch(error){
+            console.error(`Error al iniciar listener ${listenerFn.name}:`, error);
+        }
+    });
+    setupRouteAssignmentLogic(); // Configurar lógica de rutas después de iniciar listeners
+    console.log("Listeners de datos inicializados.");
 }
 
-function moveUp(id){ const i=currentRoute.stops.indexOf(id); if(i>0){ [currentRoute.stops[i-1], currentRoute.stops[i]]=[currentRoute.stops[i], currentRoute.stops[i-1]]; renderRouteBuilder(); updateMapForRoute(); } }
-function moveDown(id){ const i=currentRoute.stops.indexOf(id); if(i>=0 && i<currentRoute.stops.length-1){ [currentRoute.stops[i+1], currentRoute.stops[i]]=[currentRoute.stops[i], currentRoute.stops[i+1]]; renderRouteBuilder(); updateMapForRoute(); } }
-function removeFromRoute(id){ currentRoute.stops = currentRoute.stops.filter(x=> x!==id); const t = trips.find(x=> x.id===id); if(t) t.isAssigned=false; renderRouteBuilder(); renderPending(); updateMapForRoute(); }
+function stopDataListeners() {
+    console.log(`Deteniendo ${detachListeners.length} listeners de datos...`);
+    detachListeners.forEach(detach => {
+        if (typeof detach === 'function') {
+            detach(); // Llamar a la función de desuscripción devuelta por onSnapshot
+        }
+    });
+    detachListeners = []; // Limpiar el array
+    console.log("Listeners detenidos.");
+}
 
-btnClearRoute.addEventListener('click', ()=> { if(!confirm('Limpiar ruta?')) return; if(currentRoute){ currentRoute.stops.forEach(tid=> { const t = trips.find(x=> x.id===tid); if(t) t.isAssigned=false; }); currentRoute=null; renderRouteBuilder(); renderPending(); updateMapForRoute(); } });
+// --- LÓGICAS DE DATOS (Vehículos, Choferes, Clientes, Viajes, Rutas) ---
 
-btnSaveRoute.addEventListener('click', ()=> {
-  if(!currentRoute || !currentRoute.stops.length) return alert('Ruta vacía');
-  const r = { id: uid(), driverId: currentRoute.driverId, vehicleId: currentRoute.vehicleId, date: currentRoute.date, stops:[...currentRoute.stops], createdAt: nowISO(), status:'Activa' };
-  routes.unshift(r);
-  for(const tid of currentRoute.stops){ const t = trips.find(x=> x.id===tid); if(t){ t.isAssigned=true; t.assignedRouteId=r.id; } }
-  persistAll(); currentRoute=null; renderAll(); alert('Ruta guardada');
+// --- LÓGICA DE VEHÍCULOS ---
+document.getElementById('vehicle-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const collectionPath = VEHICLES_COLLECTION();
+    if (!collectionPath || !auth.currentUser) { // Verificar también que el usuario esté autenticado
+        showStatus('Error: No autenticado o error de conexión.', 'error');
+        return;
+    }
+    const vehicleData = {
+        model: document.getElementById('vehicle-model').value.trim(),
+        color: document.getElementById('vehicle-color').value.trim(),
+        plate: document.getElementById('vehicle-plate').value.trim(),
+        createdAt: serverTimestamp()
+    };
+    try {
+        await addDoc(collection(db, collectionPath), vehicleData);
+        showStatus(`Vehículo ${vehicleData.model} (${vehicleData.plate}) guardado.`);
+        document.getElementById('vehicle-form').reset();
+    } catch (error) {
+        console.error("Error al añadir vehículo:", error);
+        showStatus('Error al guardar el vehículo: ' + error.message, 'error');
+    }
 });
 
-btnSendDriver.addEventListener('click', ()=> {
-  if(!currentRoute) return alert('No hay ruta'); const drv = drivers.find(d=> d.id===currentRoute.driverId); if(!drv) return alert('Chofer no encontrado');
-  let text = `Ruta ${currentRoute.date}\nChofer: ${drv.name}\nParadas:\n`; currentRoute.stops.forEach(tid=>{ const t = trips.find(x=> x.id===tid); text += `- ${t.clientName} ${t.localityOrigin}→${t.localityDest} ${t.date} ${t.time} Tel:${t.phone}\n`; });
-  window.open(`https://wa.me/${(drv.phone||'').replace(/\D/g,'')}?text=${encodeURIComponent(text)}`,'_blank');
+function listenForVehicles() {
+    if (!db) return;
+    const collectionPath = VEHICLES_COLLECTION();
+    if (!collectionPath) return;
+
+    const q = collection(db, collectionPath);
+    // Devuelve la función onSnapshot para poder detenerla luego
+    return onSnapshot(q, (snapshot) => {
+        vehiclesData = [];
+        const listEl = document.getElementById('vehicles-list');
+        const selectEl = document.getElementById('route-vehicle-id');
+        if (!listEl || !selectEl) return; // Salir si los elementos no existen
+        listEl.innerHTML = '';
+        selectEl.innerHTML = '<option value="">-- Seleccionar Vehículo --</option>';
+        if (document.getElementById('loading-vehicles')) {
+        document.getElementById('loading-vehicles').remove();
+        }
+        if (snapshot.empty) {
+        listEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay vehículos registrados.</p>';
+        }
+        snapshot.docs.forEach(docSnapshot => {
+        const data = { id: docSnapshot.id, .....docSnapshot.data() };
+        vehiclesData.push(data);
+        listEl.innerHTML += `
+        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+            <div>
+            <p class="font-semibold text-gray-800">${data.model} (${data.plate})</p>
+            <p class="text-sm text-gray-500">Color: ${data.color}</p>
+            </div>
+            <button data-id="${data.id}" data-plate="${data.plate}" class="delete-vehicle-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+        </div>
+        `;
+        selectEl.innerHTML += `<option value="${data.id}">${data.model} (${data.plate})</option>`;
+        });
+        lucide.createIcons();
+        document.querySelectorAll('.delete-vehicle-btn').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteVehicle); // Remover listener previo
+        btn.addEventListener('click', handleDeleteVehicle);
+        });
+    }, (error) => {
+        console.error("Error en el oyente de vehículos:", error);
+        const listEl = document.getElementById('vehicles-list');
+        if(listEl) listEl.innerHTML = 'Error al cargar vehículos.';
+    });
+}
+
+async function handleDeleteVehicle(e) {
+    const vehicleId = e.currentTarget.getAttribute('data-id');
+    const vehiclePlate = e.currentTarget.getAttribute('data-plate');
+    const collectionPath = VEHICLES_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return;
+
+    if (confirm(`¿Seguro que deseas eliminar el vehículo ${vehiclePlate}? Esta acción es permanente.`)) {
+        try {
+            await deleteDoc(doc(db, collectionPath, vehicleId));
+            showStatus(`Vehículo ${vehiclePlate} eliminado.`);
+        } catch (error) {
+            console.error("Error al eliminar vehículo:", error);
+            showStatus('Error al eliminar vehículo: ' + error.message, 'error');
+        }
+    }
+}
+
+// --- LÓGICA DE CHOFERES ---
+document.getElementById('driver-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const collectionPath = DRIVERS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) {
+        showStatus('Error: No autenticado o error de conexión.', 'error');
+        return;
+    }
+    const driverData = {
+        name: document.getElementById('driver-name').value.trim(),
+        dni: document.getElementById('driver-dni').value.trim(),
+        phone: document.getElementById('driver-phone').value.trim(),
+        createdAt: serverTimestamp()
+    };
+    try {
+        await addDoc(collection(db, collectionPath), driverData);
+        showStatus(`Chofer ${driverData.name} guardado.`);
+        document.getElementById('driver-form').reset();
+    } catch (error) {
+        console.error("Error al añadir chofer:", error);
+        showStatus('Error al guardar el chofer: ' + error.message, 'error');
+    }
 });
 
-function viewRoute(id){ const r = routes.find(x=> x.id===id); if(!r) return; let txt = `Ruta ${r.date}\nChofer: ${drivers.find(d=> d.id===r.driverId)?.name || 'N/D'}\nVeh: ${vehicles.find(v=> v.id===r.vehicleId)?.model || 'N/D'}\nParadas:\n`; r.stops.forEach(tid=>{ const t=trips.find(x=> x.id===tid); txt+=`- ${t.clientName} | ${t.localityOrigin}→${t.localityDest} ${t.date} ${t.time}\n`; }); const ok = confirm(txt + '\nOK = eliminar y desasignar'); if(ok){ for(const tid of r.stops){ const t = trips.find(x=> x.id===tid); if(t){ t.isAssigned=false; t.assignedRouteId=null; } } routes = routes.filter(x=> x.id!==id); persistAll(); renderAll(); } }
-function deleteRoute(id){ if(!confirm('Eliminar ruta?')) return; const r = routes.find(x=> x.id===id); if(r){ for(const tid of r.stops){ const t = trips.find(x=> x.id===tid); if(t){ t.isAssigned=false; t.assignedRouteId=null; } } } routes = routes.filter(x=> x.id!==id); persistAll(); renderAll(); }
+function listenForDrivers() {
+    if (!db) return;
+    const collectionPath = DRIVERS_COLLECTION();
+    if (!collectionPath) return;
 
-/* ---------- Tickets (client & driver) ---------- */
-const { jsPDF } = window.jspdf || {};
-function ticketText(t){
-  const r = routes.find(rr=> rr.id === t.assignedRouteId);
-  const drv = r? drivers.find(d=> d.id===r.driverId) : null; const veh = r? vehicles.find(v=> v.id===r.vehicleId) : null;
-  return `MG Transporte - Ticket\nViaje: ${t.date} ${t.time}\nPasajero: ${t.clientName}\nTel: ${t.phone}\nOrigen: ${t.addressOrigin}, ${t.localityOrigin}\nDestino: ${t.addressDest}, ${t.localityDest}\nPasajeros: ${t.passengers}\nMascota: ${t.pet}\nMenores: ${t.minors}\nServicio: ${t.service}\nPrecio: ${formatMoney(t.price)}\nObservaciones: ${t.notes}\nChofer: ${drv? drv.name + ' - ' + (drv.phone||'') : 'Sin asignar'}\nVehículo: ${veh? veh.model + ' - ' + (veh.plate||'') : 'Sin asignar'}`;
-}
-function openTicketOptions(tripId){
-  const t = trips.find(x=> x.id===tripId); if(!t) return;
-  showModal('Opciones ticket', `<div style="display:flex;flex-direction:column;gap:8px"><div><strong>${esc(t.clientName)}</strong> — ${esc(t.date)} ${esc(t.time)}</div><div style="display:flex;gap:8px"><button id="m-wa" class="btn btn-primary">WhatsApp</button><button id="m-mail" class="btn">Email</button><button id="m-pdf" class="btn">Descargar PDF</button></div></div>`);
-  document.getElementById('m-wa').onclick = ()=> { window.open(`https://wa.me/${(t.phone||'').replace(/\D/g,'')}?text=${encodeURIComponent(ticketText(t))}`,'_blank'); };
-  document.getElementById('m-mail').onclick = ()=> { location.href = `mailto:${t.phone||''}?subject=${encodeURIComponent('Ticket MG Transporte')}&body=${encodeURIComponent(ticketText(t))}`; };
-  document.getElementById('m-pdf').onclick = ()=> { generatePdf(t); hideModal(); };
-}
-function generatePdf(t){
-  if(!jsPDF) return alert('jsPDF no cargado');
-  const doc = new jsPDF({ unit:'pt', format:'a4' });
-  doc.setFontSize(16); doc.text('MG Transporte - Ticket', 40, 60);
-  doc.setFontSize(11);
-  let y=90; ticketText(t).split('\n').forEach(line=>{ doc.text(line, 40, y); y+=14; });
-  doc.save(`ticket_${t.clientName.replace(/\s+/g,'_')}_${t.date}.pdf`);
-}
-
-/* ---------- Backups & SheetJS ---------- */
-function buildWorkbook(data){
-  const wb = XLSX.utils.book_new();
-  const tripsRows = data.trips.map(t=>({ Fecha:t.date, Hora:t.time, Cliente:t.clientName, Celular:t.phone, 'Localidad Origen':t.localityOrigin, 'Direccion Origen':t.addressOrigin, 'Localidad Destino':t.localityDest, 'Direccion Destino':t.addressDest, Precio:t.price, Estado:t.status, Observaciones:t.notes }));
-  const wsTrips = XLSX.utils.json_to_sheet(tripsRows);
-  XLSX.utils.book_append_sheet(wb, wsTrips, 'Viajes');
-
-  const wsRoutes = XLSX.utils.json_to_sheet(data.routes.map(r=> ({ id:r.id, date:r.date, driverId:r.driverId, vehicleId:r.vehicleId, stops:r.stops.join(',') })));
-  XLSX.utils.book_append_sheet(wb, wsRoutes, 'Rutas');
-
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.drivers), 'Choferes');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.vehicles), 'Vehículos');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.clients), 'Clientes');
-  return wb;
-}
-function downloadWorkbook(wb, filename){
-  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
-  const blob = new Blob([wbout], { type:'application/octet-stream' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-}
-function doBackup(note='auto'){
-  const snap = { id: uid(), ts: nowISO(), note, data:{ trips, routes, drivers, vehicles, clients } };
-  backups.unshift(snap);
-  if(backups.length>60) backups = backups.slice(0,60);
-  write(KEYS.backups, backups);
-  backupCount.textContent = backups.length;
-  const wb = buildWorkbook(snap.data);
-  const fname = `backup_MGTransporte_${(new Date()).toISOString().slice(0,10)}.xlsx`;
-  downloadWorkbook(wb, fname);
-  renderBackups();
+    const q = collection(db, collectionPath);
+    return onSnapshot(q, (snapshot) => { // Devuelve la función de desuscripción
+        driversData = [];
+        const listEl = document.getElementById('drivers-list');
+        const selectEl = document.getElementById('route-driver-id');
+        if (!listEl || !selectEl) return;
+        listEl.innerHTML = '';
+        selectEl.innerHTML = '<option value="">-- Seleccionar Chofer --</option>';
+        if (document.getElementById('loading-drivers')) document.getElementById('loading-drivers').remove();
+        if (snapshot.empty) {
+            listEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay choferes registrados.</p>';
+        }
+        snapshot.docs.forEach(docSnapshot => {
+            const data = { id: docSnapshot.id, .....docSnapshot.data() };
+            driversData.push(data);
+            listEl.innerHTML += `
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-l-4 border-primary">
+                <div>
+                <p class="font-semibold text-gray-800">${data.name}</p>
+                <p class="text-sm text-gray-500">DNI: ${data.dni} | Teléfono: ${data.phone}</p>
+                </div>
+                <button data-id="${data.id}" data-name="${data.name}" class="delete-driver-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </div>
+            `;
+            selectEl.innerHTML += `<option value="${data.id}">${data.name} (DNI: ${data.dni})</option>`;
+        });
+        lucide.createIcons();
+        document.querySelectorAll('.delete-driver-btn').forEach(btn => {
+            btn.removeEventListener('click', handleDeleteDriver); // Remover listener previo
+            btn.addEventListener('click', handleDeleteDriver);
+        });
+    }, (error) => {
+        console.error("Error en oyente de choferes:", error);
+        const listEl = document.getElementById('drivers-list');
+        if(listEl) listEl.innerHTML = 'Error al cargar choferes.';
+    });
 }
 
-/* planilla (hoja por mes) */
-function exportPlanilla(){
-  const byMonth = {};
-  trips.forEach(t=>{ const m = t.date ? t.date.slice(0,7) : 'SinFecha'; if(!byMonth[m]) byMonth[m]=[]; byMonth[m].push(t); });
-  const wb = XLSX.utils.book_new();
-  Object.keys(byMonth).sort().forEach(mon=>{
-    const rows = byMonth[mon].map(t=> ({ Fecha:t.date, Hora:t.time, Cliente:t.clientName, Celular:t.phone, 'Localidad Origen':t.localityOrigin, 'Direccion Origen':t.addressOrigin, 'Localidad Destino':t.localityDest, 'Direccion Destino':t.addressDest, Precio:t.price, Estado:t.status, Observaciones:t.notes }) );
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const total = rows.reduce((s,r)=> s + (Number(r.Precio)||0), 0);
-    const lastRow = rows.length + 3;
-    XLSX.utils.sheet_add_aoa(ws, [['Total viajes', rows.length], ['Total facturado', total]], { origin:`A${lastRow}`});
-    XLSX.utils.book_append_sheet(wb, ws, mon);
-  });
-  const fname = `Planilla_Viajes_${(new Date()).toISOString().slice(0,10)}.xlsx`;
-  downloadWorkbook(wb, fname);
+async function handleDeleteDriver(e) {
+    const driverId = e.currentTarget.getAttribute('data-id');
+    const driverName = e.currentTarget.getAttribute('data-name');
+    const collectionPath = DRIVERS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return;
+
+    if (confirm(`¿Seguro que deseas eliminar al chofer ${driverName}? Esta acción es permanente.`)) {
+        try {
+            await deleteDoc(doc(db, collectionPath, driverId));
+            showStatus(`Chofer ${driverName} eliminado.`);
+        } catch (error) {
+            console.error("Error al eliminar chofer:", error);
+            showStatus('Error al eliminar chofer: ' + error.message, 'error');
+        }
+    }
 }
 
-/* export/import JSON */
-function exportJSON(){
-  const pack = { trips, drivers, vehicles, clients, routes, ts: nowISO() };
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(pack,null,2)], { type:'application/json' })); a.download = `mg_export_${nowISO().slice(0,10)}.json`; a.click();
+
+// --- LÓGICA DE CLIENTES ---
+function listenForCustomers() {
+    if (!db) return;
+    const collectionPath = CUSTOMERS_COLLECTION();
+    if (!collectionPath) return;
+
+    const q = collection(db, collectionPath);
+    return onSnapshot(q, (snapshot) => { // Devuelve la función de desuscripción
+        customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderCustomersList(customersData);
+    }, (error) => {
+        console.error("Error en oyente de clientes:", error);
+        const listEl = document.getElementById('customers-list');
+        if (listEl) listEl.innerHTML = 'Error al cargar clientes.';
+    });
+
+    // Filtro de búsqueda (este listener no necesita detenerse explícitamente)
+    document.getElementById('customer-search')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredCustomers = customersData.filter(cust =>
+        (cust.name && cust.name.toLowerCase().includes(searchTerm)) ||
+        (cust.phone && cust.phone.toLowerCase().includes(searchTerm))
+        );
+        renderCustomersList(filteredCustomers);
+    });
 }
-function importJSON(){
-  const fi = document.createElement('input'); fi.type='file'; fi.accept='application/json';
-  fi.onchange = ev => {
-    const f = ev.target.files[0]; if(!f) return;
-    const r = new FileReader(); r.onload = ()=> {
-      try{
-        const obj = JSON.parse(r.result);
-        if(obj.trips) trips = obj.trips; if(obj.drivers) drivers = obj.drivers; if(obj.vehicles) vehicles = obj.vehicles; if(obj.clients) clients = obj.clients; if(obj.routes) routes = obj.routes;
-        persistAll(); renderAll(); alert('Importación OK');
-      }catch(e){ alert('Error importando JSON'); console.error(e); }
-    }; r.readAsText(f);
-  };
-  fi.click();
+function renderCustomersList(customers) {
+    const listEl = document.getElementById('customers-list');
+    if(!listEl) return;
+    listEl.innerHTML = '';
+    if (document.getElementById('loading-customers')) document.getElementById('loading-customers').remove();
+
+    if (customers.length === 0) {
+        listEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay clientes registrados.</p>';
+        return;
+    }
+
+    customers.forEach(data => {
+        let addressesHtml = '<p class="text-xs text-gray-500">Sin direcciones guardadas.</p>';
+        if (data.addresses && data.addresses.length > 0) {
+        addressesHtml = data.addresses.map(addr =>
+            `<li class="text-xs text-gray-600 bg-gray-100 p-1 rounded">${addr.address || ''}, ${addr.locality || ''}</li>`
+        ).join('');
+        addressesHtml = `<ul class="space-y-1 mt-2">${addressesHtml}</ul>`;
+        }
+
+        listEl.innerHTML += `
+        <div class="p-4 bg-gray-50 rounded-lg border border-l-4 border-accent">
+            <div class="flex justify-between items-center">
+            <div>
+                <p class="font-semibold text-gray-800">${data.name || 'Sin Nombre'}</p>
+                <p class="text-sm text-gray-500"><i data-lucide="phone" class="w-3 h-3 inline-block mr-1"></i> ${data.phone || 'N/A'}</p>
+            </div>
+            <button data-id="${data.id}" data-name="${data.name || 'este cliente'}" class="delete-customer-btn text-red-500 hover:text-red-700 p-1 rounded-full transition duration-150 btn-feedback">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+            </div>
+            <div class="mt-2">
+            <p class="text-sm font-medium text-gray-700">Direcciones de Origen Guardadas:</p>
+            ${addressesHtml}
+            </div>
+        </div>
+        `;
+    });
+
+    lucide.createIcons();
+    document.querySelectorAll('.delete-customer-btn').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteCustomer); // Remover listener previo
+        btn.addEventListener('click', handleDeleteCustomer);
+    });
+}
+async function saveOrUpdateCustomer(tripData) {
+    const collectionPath = CUSTOMERS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return; // Verificar auth también
+
+    if (!tripData.clientPhone || tripData.clientPhone.trim() === '') {
+        console.warn("No se guardó el cliente porque falta el teléfono.");
+        return;
+    }
+
+    const newAddress = { address: tripData.addressOrigin, locality: tripData.localityOrigin };
+    const q = query(collection(db, collectionPath), where("phone", "==", tripData.clientPhone));
+    try {
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            await addDoc(collection(db, collectionPath), {
+                name: tripData.clientName, phone: tripData.clientPhone, addresses: [newAddress], createdAt: serverTimestamp()
+            });
+        } else {
+            const customerDoc = querySnapshot.docs[0];
+            const customerData = customerDoc.data();
+            const addressExists = customerData.addresses?.some(addr => addr.address === newAddress.address && addr.locality === newAddress.locality) || false;
+            let updates = {}; let needsUpdate = false;
+            if (customerData.name !== tripData.clientName) { updates.name = tripData.clientName; needsUpdate = true; }
+            if (!addressExists) { updates.addresses = arrayUnion(newAddress); needsUpdate = true; }
+            if (needsUpdate) await updateDoc(customerDoc.ref, updates);
+        }
+    } catch (error) { console.error("Error al guardar/actualizar cliente:", error); showStatus("Error al guardar datos del cliente.", "error"); }
+}
+async function handleDeleteCustomer(e) {
+    const customerId = e.currentTarget.getAttribute('data-id');
+    const customerName = e.currentTarget.getAttribute('data-name');
+    const collectionPath = CUSTOMERS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return;
+
+    if (confirm(`¿Seguro que deseas eliminar al cliente ${customerName}? Esta acción es permanente.`)) {
+        try { await deleteDoc(doc(db, collectionPath, customerId)); showStatus(`Cliente ${customerName} eliminado.`); }
+        catch (error) { console.error("Error al eliminar cliente:", error); showStatus('Error al eliminar cliente: ' + error.message, 'error'); }
+    }
 }
 
-/* ---------- Queue & Firebase (optional) ---------- */
-function maybeQueuePush(type, payload){
-  if(settings.firebaseEnabled && window.firebase && window.firebase.firestore && navigator.onLine){
-    // push to firestore (simple)
-    try{
-      const db = firebase.firestore();
-      if(type==='trip'){ db.collection('trips').doc(payload.id || uid()).set(payload); }
-    }catch(e){ queue.unshift({ id:uid(), ts:nowISO(), type, payload }); write(KEYS.queue, queue); }
+
+// --- LÓGICA DE VIAJES (Tickets) ---
+document.getElementById('trip-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const collectionPath = TRIPS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) {
+        showStatus('Error: No autenticado o error de conexión.', 'error');
+        return;
+    }
+    console.log("Intentando guardar en:", collectionPath);
+
+    const tripData = {
+        clientName: document.getElementById('client-name').value.trim(),
+        clientPhone: document.getElementById('client-phone').value.trim(),
+        addressOrigin: document.getElementById('address-origin').value.trim(),
+        localityOrigin: document.getElementById('locality-origin').value.trim(),
+        addressDest: document.getElementById('address-dest').value.trim(),
+        localityDest: document.getElementById('locality-dest').value.trim(),
+        date: document.getElementById('trip-date').value,
+        time: document.getElementById('trip-time').value,
+        price: parseFloat(document.getElementById('trip-price').value),
+        pasajeros: parseInt(document.getElementById('trip-passengers').value, 10),
+        mascotas: parseInt(document.getElementById('trip-pets').value, 10),
+        petSize: document.getElementById('trip-pet-size').value,
+    };
+
+    if (!tripData.date || !tripData.time) { showStatus('La fecha y hora son obligatorias.', 'error'); return; }
+    if (tripData.clientPhone.trim() === '') { showStatus('El teléfono es obligatorio.', 'error'); return; }
+
+    try {
+        await saveOrUpdateCustomer(tripData);
+
+        if (currentlyEditingTripId) {
+            const tripRef = doc(db, collectionPath, currentlyEditingTripId);
+            await updateDoc(tripRef, tripData);
+            showStatus(`Ticket de ${tripData.clientName} actualizado.`, 'success');
+        } else {
+            tripData.isAssigned = false; tripData.assignedRouteId = null; tripData.status = 'Activo';
+            tripData.createdAt = serverTimestamp(); tripData.ticketId = Math.random().toString(36).substring(2, 9).toUpperCase();
+
+            console.log("Añadiendo nuevo ticket:", tripData);
+            await addDoc(collection(db, collectionPath), tripData);
+            console.log("Ticket añadido con éxito.");
+            showStatus(`Ticket #${tripData.ticketId} para ${tripData.clientName} registrado.`, 'success');
+            await showClientTicketModal(tripData);
+        }
+        handleCancelEdit();
+    } catch (error) { console.error("Error al guardar viaje:", error); showStatus('Error al guardar el viaje: ' + error.message, 'error'); }
+});
+document.getElementById('cancel-edit-btn')?.addEventListener('click', handleCancelEdit);
+function handleCancelEdit() {
+    currentlyEditingTripId = null;
+    document.getElementById('trip-form').reset();
+    document.getElementById('editing-trip-id').value = '';
+    document.getElementById('save-trip-btn').innerHTML = '<i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i> Registrar Ticket';
+    document.getElementById('cancel-edit-btn').classList.add('hidden');
+    lucide.createIcons();
+}
+function handleStartEditTrip(e) {
+    const tripData = JSON.parse(e.currentTarget.getAttribute('data-trip'));
+    window.scrollTo(0, 0);
+
+    currentlyEditingTripId = tripData.id;
+    document.getElementById('editing-trip-id').value = tripData.id;
+    document.getElementById('client-name').value = tripData.clientName;
+    document.getElementById('client-phone').value = tripData.clientPhone;
+    document.getElementById('address-origin').value = tripData.addressOrigin;
+    document.getElementById('locality-origin').value = tripData.localityOrigin;
+    document.getElementById('address-dest').value = tripData.addressDest;
+    document.getElementById('locality-dest').value = tripData.localityDest;
+    document.getElementById('trip-date').value = tripData.date;
+    document.getElementById('trip-time').value = tripData.time;
+    document.getElementById('trip-price').value = tripData.price;
+    document.getElementById('trip-passengers').value = tripData.pasajeros || 1;
+    document.getElementById('trip-pets').value = tripData.mascotas || 0;
+    document.getElementById('trip-pet-size').value = tripData.petSize || 'ninguno';
+
+    document.getElementById('save-trip-btn').innerHTML = '<i data-lucide="save" class="w-5 h-5 mr-2"></i> Guardar Cambios';
+    document.getElementById('cancel-edit-btn').classList.remove('hidden');
+    lucide.createIcons();
+}
+async function handleFinalizeTrip(e) {
+    const button = e.currentTarget;
+    const tripId = button.getAttribute('data-id');
+    const clientName = button.getAttribute('data-client');
+    const collectionPath = TRIPS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return;
+
+    const trip = allTripsData.find(t => t.id === tripId);
+    if (trip && trip.isAssigned) {
+        showStatus(`Error: No se puede finalizar un ticket asignado a una ruta (${trip.assignedRouteId?.slice(-4) || '?'}). Desasígnalo primero.`, 'error');
+        return;
+    }
+
+    if (confirm(`¿Seguro que deseas finalizar el viaje de ${clientName}? El ticket se moverá a 'Finalizados'.`)) {
+        try {
+            const tripRef = doc(db, collectionPath, tripId);
+            await updateDoc(tripRef, { status: 'Finalizado' });
+            showStatus(`Viaje de ${clientName} finalizado.`);
+        } catch (error) {
+            console.error("Error al finalizar viaje:", error);
+            showStatus('Error al finalizar viaje: ' + error.message, 'error');
+        }
+    }
+}
+function listenForTrips() {
+    if (!db) return;
+    const collectionPath = TRIPS_COLLECTION();
+    if (!collectionPath) return;
+
+    const q = collection(db, collectionPath);
+    return onSnapshot(q, (snapshot) => { // Devuelve la función de desuscripción
+        allTripsData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, .....docSnapshot.data() }));
+        renderTripLists(allTripsData);
+        renderPendingTripsList(); // Actualizar pendientes en la pestaña rutas
+    }, (error) => {
+        console.error("Error en oyente de viajes:", error);
+        const listEl = document.getElementById('trips-list-active');
+        if(listEl) listEl.innerHTML = 'Error al cargar tickets.';
+    });
+}
+function renderTripLists(trips) {
+    const activeListEl = document.getElementById('trips-list-active');
+    const finishedListEl = document.getElementById('trips-list-finished');
+    if(!activeListEl || !finishedListEl) return; // Add null checks
+
+    activeListEl.innerHTML = '';
+    finishedListEl.innerHTML = '';
+
+    const activeTrips = trips.filter(t => t.status !== 'Finalizado').sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+    const finishedTrips = trips.filter(t => t.status === 'Finalizado').sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+
+    if (document.getElementById('loading-trips-active')) document.getElementById('loading-trips-active').remove();
+    if (activeTrips.length === 0) {
+        activeListEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay tickets activos.</p>';
+    } else {
+        activeTrips.forEach(data => activeListEl.innerHTML += createTripCardHtml(data, 'active'));
+    }
+
+    if (document.getElementById('loading-trips-finished')) document.getElementById('loading-trips-finished').remove();
+    if (finishedTrips.length === 0) {
+        finishedListEl.innerHTML = '<p class="text-center text-gray-500 p-4 border border-dashed rounded-lg">No hay tickets finalizados.</p>';
+    } else {
+        finishedTrips.forEach(data => finishedListEl.innerHTML += createTripCardHtml(data, 'finished'));
+    }
+
+    lucide.createIcons();
+    setupTripCardButtons();
+}
+function createTripCardHtml(data, type) {
+    const assignedText = data.isAssigned && data.assignedRouteId ?
+    `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Asignado a Ruta #${data.assignedRouteId.slice(-4)}</span>` :
+    `<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs">Pendiente de Ruta</span>`;
+
+    let petInfo = `Mascotas: ${data.mascotas || 0}`;
+    if (data.petSize && data.petSize !== 'ninguno') petInfo += ` (${data.petSize})`;
+
+    let buttons = '';
+    if (type === 'active') {
+        const isAssigned = data.isAssigned;
+        const finalizeDisabled = isAssigned ? 'disabled' : '';
+        const finalizeTitle = isAssigned ? 'Desasigna este ticket de su ruta para poder finalizarlo.' : 'Finalizar ticket';
+
+        buttons = `
+        <button data-trip='${JSON.stringify(data)}' class="edit-trip-btn text-blue-600 hover:text-blue-800 text-xs font-medium mr-2 p-1 rounded-lg bg-blue-100 btn-feedback">
+            <i data-lucide="edit-2" class="w-4 h-4"></i> Editar
+        </button>
+        <button data-id="${data.id}" data-client="${data.clientName}" class="finalize-trip-btn text-green-600 hover:text-green-800 text-xs font-medium mr-2 p-1 rounded-lg bg-green-100 btn-feedback" ${finalizeDisabled} title="${finalizeTitle}">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Finalizar
+        </button>
+        <button data-id="${data.id}" data-client="${data.clientName}" data-is-assigned="${isAssigned}" class="delete-trip-btn text-red-500 hover:text-red-700 text-xs font-medium p-1 rounded-lg bg-red-100 btn-feedback">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Borrar
+        </button>
+        `;
+    } else {
+        buttons = `
+        <button data-id="${data.id}" data-client="${data.clientName}" data-is-assigned="false" class="delete-trip-btn text-red-500 hover:text-red-700 text-xs font-medium p-1 rounded-lg bg-red-100 btn-feedback">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Borrar
+        </button>
+        `;
+    }
+
+    const dateTimeInfo = `<i data-lucide="calendar-clock" class="w-4 h-4 inline-block mr-1 text-blue-500"></i> ${data.date} a las ${data.time}`;
+
+    return `
+    <div class="bg-gray-50 p-4 border rounded-xl shadow-sm border-l-4 ${data.isAssigned ? 'border-green-500' : 'border-red-500'}">
+        <div class="flex justify-between items-start mb-2">
+        <h3 class="font-bold text-lg text-gray-700">${data.clientName}</h3>
+        <div class="text-right">
+            <span class="text-xs font-mono bg-gray-200 text-gray-600 px-2 py-1 rounded-full">#${data.ticketId}</span>
+            ${type === 'active' ? assignedText : '<span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">Finalizado</span>'}
+        </div>
+        </div>
+        <p class="text-sm text-gray-500 mb-2">
+        <i data-lucide="map-pin" class="w-4 h-4 inline-block mr-1 text-red-500"></i> ${data.addressOrigin}, ${data.localityOrigin}
+        <i data-lucide="arrow-right" class="w-4 h-4 inline-block mx-2"></i>
+        <i data-lucide="flag" class="w-4 h-4 inline-block mr-1 text-green-500"></i> ${data.addressDest}, ${data.localityDest}
+        </p>
+        <p class="text-sm text-gray-500 mb-2"> ${dateTimeInfo} </p>
+        <p class="text-sm text-gray-500 mb-2">
+        <i data-lucide="users" class="w-4 h-4 inline-block mr-1 text-blue-500"></i> Pasajeros: ${data.pasajeros || 1} |
+        <i data-lucide="dog" class="w-4 h-4 inline-block ml-3 mr-1 text-blue-500"></i> ${petInfo}
+        </p>
+        <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+        <span class="font-bold text-green-600">${formatPrice(data.price)}</span>
+        <div class="flex items-center">
+            <button data-trip='${JSON.stringify(data)}' class="generate-client-ticket-btn text-primary hover:underline text-sm font-medium mr-4 transition-all duration-150 btn-feedback">
+            Ver Ticket
+            </button>
+            <div class="flex gap-2">
+            ${buttons}
+            </div>
+        </div>
+        </div>
+    </div>
+    `;
+}
+function setupTripCardButtons() {
+    document.querySelectorAll('.generate-client-ticket-btn').forEach(btn => {
+        btn.removeEventListener('click', handleGenerateClientTicket); // Remover listener previo
+        btn.addEventListener('click', handleGenerateClientTicket);
+    });
+    document.querySelectorAll('.delete-trip-btn').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteTrip); // Remover listener previo
+        btn.addEventListener('click', handleDeleteTrip);
+    });
+    document.querySelectorAll('.edit-trip-btn').forEach(btn => {
+        btn.removeEventListener('click', handleStartEditTrip); // Remover listener previo
+        btn.addEventListener('click', handleStartEditTrip);
+    });
+    document.querySelectorAll('.finalize-trip-btn').forEach(btn => {
+        btn.removeEventListener('click', handleFinalizeTrip); // Remover listener previo
+        btn.addEventListener('click', handleFinalizeTrip);
+    });
+}
+// Renombrar la función para evitar conflictos si se llama desde otro lado
+async function handleGenerateClientTicket(e) {
+    const button = e.currentTarget;
+    const originalHtml = button.innerHTML;
+    button.innerHTML = 'Cargando...'; // Texto simple, sin spinner
+    button.disabled = true;
+    try {
+        const tripData = JSON.parse(button.getAttribute('data-trip'));
+        await showClientTicketModal(tripData);
+    } catch (error) {
+        console.error("Error al generar ticket:", error);
+        showStatus("Error al generar ticket.", "error"); 
+    } finally {
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+        lucide.createIcons();
+    }
+}
+async function handleDeleteTrip(e) {
+    const button = e.currentTarget;
+    const tripId = button.getAttribute('data-id');
+    const clientName = button.getAttribute('data-client');
+    const isAssigned = button.getAttribute('data-is-assigned') === 'true';
+    const collectionPath = TRIPS_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return;
+
+    let confirmMsg = `¿Seguro que deseas eliminar el viaje de ${clientName}? Esta acción es permanente.`;
+    if (isAssigned) {
+        confirmMsg = `ADVERTENCIA: Este ticket está asignado a una ruta. Si lo borras, se eliminará permanentemente pero NO se desasignará de la ruta (puede causar errores de precio). Se recomienda desasignarlo primero desde la pestaña 'Rutas'.\n\n¿Eliminar de todas formas?`;
+    }
+
+    if (confirm(confirmMsg)) { // CORREGIDO: Usar confirm() en lugar de prompt()
+        try {
+            await deleteDoc(doc(db, collectionPath, tripId));
+            showStatus(`Viaje de ${clientName} eliminado.`, 'success');
+        } catch (error) {
+            console.error("Error al eliminar viaje:", error);
+            showStatus('Error al eliminar viaje: ' + error.message, 'error');
+        }
+    }
+}
+
+
+// --- LÓGICA DE RUTAS (Asignación) ---
+function setupRouteAssignmentLogic() {
+  const routeForm = document.getElementById('route-form');
+  const cancelEditBtn = document.getElementById('cancel-route-edit-btn');
+  if (routeForm) {
+    routeForm.addEventListener('submit', handleSaveRoute);
   } else {
-    queue.unshift({ id:uid(), ts:nowISO(), type, payload }); write(KEYS.queue, queue);
+    console.error("Elemento 'route-form' no encontrado.");
+  }
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', handleCancelRouteEdit);
+  } else {
+    console.error("Elemento 'cancel-route-edit-btn' no encontrado.");
   }
 }
-async function processQueue(){
-  if(!settings.firebaseEnabled || !window.firebase || !navigator.onLine) { syncStatus.textContent = settings.firebaseEnabled ? 'Online (no conectado a Firebase)' : 'Local'; return; }
-  syncStatus.textContent = 'Sincronizando...';
-  const db = firebase.firestore();
-  while(queue.length){
-    const it = queue.pop();
-    try{
-      if(it.type==='trip'){ await db.collection('trips').doc(it.payload.id).set(it.payload); }
-      // more types can be processed
-      write(KEYS.queue, queue);
-    }catch(e){ console.error('queue process err', e); queue.push(it); write(KEYS.queue, queue); break; }
-  }
-  syncStatus.textContent = 'Sincronización finalizada';
+function listenForRoutes() {
+    if (!db) return;
+    const collectionPath = ROUTES_COLLECTION();
+    if (!collectionPath) return;
+
+    const q = collection(db, collectionPath);
+    return onSnapshot(q, (snapshot) => { // Devuelve la función de desuscripción
+        allRoutesData = snapshot.docs.map(docSnapshot => ({ id: docSnapshot.id, .....docSnapshot.data() }));
+        renderRouteLists(allRoutesData); // Renderizar lista en "Rutas Creadas"
+        
+        // Actualizar el panel de detalles si la ruta actual cambió
+        if (currentRouteData) {
+            const updatedRoute = allRoutesData.find(r => r.id === currentRouteData.id);
+            if (updatedRoute) {
+                currentRouteData = updatedRoute;
+                updateRoutePlannerDetails(updatedRoute); // Actualizar el planificador
+            } else {
+                currentRouteData = null;
+                updateRoutePlannerDetails(null); // Limpiar el planificador
+            }
+        }
+    }, (error) => {
+        console.error("Error en oyente de rutas:", error);
+        const listEl = document.getElementById('active-routes-list');
+        if(listEl) listEl.innerHTML = 'Error al cargar rutas.';
+    });
+}
+async function handleSaveRoute(e) {
+    e.preventDefault();
+    const collectionPath = ROUTES_COLLECTION();
+    if (!collectionPath || !auth.currentUser) return;
+
+    const driverId = document.getElementById('route-driver-id').value;
+    const vehicleId = document.getElementById('route-vehicle-id').value;
+    const date = document.getElementById('route-date').value;
+    const driver = driversData.find(d => d.id === driverId);
+    const vehicle = vehiclesData.find(v => v.id === vehicleId);
+
+    if (!driver || !vehicle) {
+        showStatus('Debe seleccionar un chofer y un vehículo válidos.', 'error');
+        return;
+    }
+
+    const routeData = {
+        driverId, driverName: driver.name, driverDni: driver.dni, driverPhone: driver.phone,
+        vehicleId, vehiclePlate: vehicle.plate, vehicleModel: vehicle.model, vehicleColor: vehicle.color,
+        date,
+    };
+
+    const editingId = currentlyEditingRouteId;
+    try {
+        if (editingId) {
+            const routeRef = doc(db, collectionPath, editingId);
+            await updateDoc(routeRef, routeData);
+            showStatus(`Ruta #${editingId.slice(-4)} actualizada.`, 'success');
+        } else {
+            routeData.trips = []; routeData.totalPrice = 0; routeData.status = 'Activa';
+            routeData.createdAt = serverTimestamp();
+            const docRef = await addDoc(collection(db, collectionPath), routeData);
+            showStatus(`Ruta #${docRef.id.slice(-4)} creada para ${driver.name}.`, 'success');
+        }
+        handleCancelRouteEdit();
+    } catch (error) { console.error("Error al guardar ruta:", error); showStatus('Error al guardar ruta: ' + error.message, 'error'); }
+}
+function handleCancelRouteEdit() {
+    currentlyEditingRouteId = null;
+    document.getElementById('route-form').reset();
+    document.getElementById('route-form-title').textContent = 'Crear Nueva Ruta';
+    document.getElementById('save-route-btn').innerHTML = '<i data-lucide="plus-square" class="w-5 h-5 mr-2"></i> Guardar Ruta';
+    document.getElementById('cancel-route-edit-btn').classList.add('hidden');
+    lucide.createIcons();
+}
+function handleStartEditRoute(e) {
+    e.stopPropagation(); // Evitar que se seleccione la tarjeta
+    const routeData = JSON.parse(e.currentTarget.getAttribute('data-route'));
+    
+    // Cambiar a la pestaña "Rutas Creadas" y scrollear arriba
+    document.getElementById('sub-tab-rutas-crear').click();
+    window.scrollTo(0, 0);
+
+    currentlyEditingRouteId = routeData.id;
+    document.getElementById('route-driver-id').value = routeData.driverId;
+    document.getElementById('route-vehicle-id').value = routeData.vehicleId;
+    document.getElementById('route-date').value = routeData.date;
+
+    document.getElementById('route-form-title').textContent = `Editando Ruta #${routeData.id.slice(-4)}`;
+    document.getElementById('save-route-btn').innerHTML = '<i data-lucide="save" class="w-5 h-5 mr-2"></i> Guardar Cambios';
+    document.getElementById('cancel-route-edit-btn').classList.remove('hidden');
+    lucide.createIcons();
+}
+async function handleFinalizeRouteFromCard(e) {
+    e.stopPropagation(); // Evitar que se seleccione la tarjeta
+    const routeId = e.currentTarget.getAttribute('data-id');
+    const route = allRoutesData.find(r => r.id === routeId);
+    if (!route) return;
+    const routeCollectionPath = ROUTES_COLLECTION();
+    const tripCollectionPath = TRIPS_COLLECTION();
+    if (!routeCollectionPath || !tripCollectionPath) return;
+    const tripCount = route.trips?.length || 0;
+
+    if (confirm(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados también se marcarán como finalizados.`)) {
+        try {
+            const batch = writeBatch(db);
+            // CORREGIDO: Filtrar por viajes que SÍ existen
+            if(Array.isArray(route.trips)){
+                const existingTripIds = allTripsData.map(t => t.id);
+                route.trips.forEach(tripId => {
+                    if (existingTripIds.includes(tripId)) { // Solo finalizar si el trip existe
+                        const tripRef = doc(db, tripCollectionPath, tripId);
+                        batch.update(tripRef, { status: 'Finalizado' });
+                    }
+                });
+            }
+            const routeRef = doc(db, routeCollectionPath, routeId);
+            batch.update(routeRef, { status: 'Finalizada', finishedAt: serverTimestamp() });
+            await batch.commit();
+
+            if (currentRouteData && currentRouteData.id === routeId) {
+                currentRouteData = null;
+                updateRoutePlannerDetails(null); // Limpiar planificador
+            }
+            showStatus(`Ruta #${routeId.slice(-4)} finalizada con éxito.`, 'success');
+        } catch (error) { console.error("Error al finalizar ruta:", error); showStatus('Error al finalizar ruta: ' + error.message, 'error'); }
+    }
+}
+async function handleDeleteRoute(e) {
+    e.stopPropagation(); // Evitar que se seleccione la tarjeta
+    const routeId = e.currentTarget.getAttribute('data-id');
+    const route = allRoutesData.find(r => r.id === routeId);
+    if (!route) return;
+    const routeCollectionPath = ROUTES_COLLECTION();
+    const tripCollectionPath = TRIPS_COLLECTION();
+    if (!routeCollectionPath || !tripCollectionPath) return;
+    const tripCount = route.trips?.length || 0;
+
+    if (confirm(`¿Seguro que deseas ELIMINAR la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados volverán a estar 'Pendientes'.`)) {
+        try {
+            const batch = writeBatch(db);
+            // CORREGIDO: Filtrar por viajes que SÍ existen
+            if(Array.isArray(route.trips)){
+                const existingTripIds = allTripsData.map(t => t.id);
+                route.trips.forEach(tripId => {
+                    if (existingTripIds.includes(tripId)) { // Solo desasignar si el trip existe
+                        const tripRef = doc(db, tripCollectionPath, tripId);
+                        batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+                    }
+                });
+            }
+            const routeRef = doc(db, routeCollectionPath, routeId);
+            batch.delete(routeRef);
+            await batch.commit();
+
+            if (currentRouteData && currentRouteData.id === routeId) {
+                currentRouteData = null;
+                updateRoutePlannerDetails(null); // Limpiar planificador
+            }
+            showStatus(`Ruta #${routeId.slice(-4)} eliminada.`, 'success');
+        } catch (error) { console.error("Error al eliminar ruta:", error); showStatus('Error al eliminar ruta: ' + error.message, 'error'); }
+    }
+}
+// Renderiza la lista de rutas en la pestaña "Rutas Creadas"
+function renderRouteLists(routes) {
+    const activeListEl = document.getElementById('active-routes-list');
+    const finishedListEl = document.getElementById('finished-routes-list');
+    if (!activeListEl || !finishedListEl) return;
+    activeListEl.innerHTML = ''; finishedListEl.innerHTML = '';
+
+    const activeRoutes = routes.filter(r => r.status === 'Activa').sort((a,b) => a.date.localeCompare(b.date));
+    const finishedRoutes = routes.filter(r => r.status === 'Finalizada').sort((a,b) => b.date.localeCompare(a.date));
+
+    // Activas
+    if (document.getElementById('loading-routes-active')) document.getElementById('loading-routes-active').remove();
+    if (activeRoutes.length === 0) {
+        activeListEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas activas.</p>';
+    } else {
+        activeRoutes.forEach(route => {
+            const tripCount = route.trips?.length || 0;
+            const total = formatPrice(route.totalPrice);
+            activeListEl.innerHTML += `
+            <div class="p-3 bg-gray-50 rounded-lg shadow-sm border route-status-card">
+                <div class="flex justify-between items-center mb-2">
+                <p class="font-semibold text-gray-800">Ruta #${route.id.slice(-4)} (${route.date})</p>
+                <span class="text-xs font-medium text-primary">${total}</span>
+                </div>
+                <p class="text-sm text-gray-600">Chofer: ${route.driverName}</p>
+                <p class="text-xs text-gray-500">${tripCount} Tramo(s)</p>
+                <div class="flex items-center justify-between mt-3 pt-2 border-t">
+                <button data-id="${route.id}" class="plan-route-btn text-primary hover:underline text-sm font-medium btn-feedback">
+                    Planificar esta Ruta →
+                </button>
+                <div class="flex gap-2">
+                    <button data-route='${JSON.stringify(route)}' class="edit-route-btn text-blue-600 hover:text-blue-800 p-1 rounded-lg bg-blue-100 btn-feedback" title="Editar Ruta">
+                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
+                    <button data-id="${route.id}" class="finalize-route-btn-card text-green-600 hover:text-green-800 p-1 rounded-lg bg-green-100 btn-feedback" title="Finalizar Ruta">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    </button>
+                    <button data-id="${route.id}" class="delete-route-btn text-red-500 hover:text-red-700 p-1 rounded-lg bg-red-100 btn-feedback" title="Eliminar Ruta">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                </div>
+            </div>
+            `;
+        });
+    }
+
+    // Finalizadas
+    if (document.getElementById('loading-routes-finished')) document.getElementById('loading-routes-finished').remove();
+    if (finishedRoutes.length === 0) {
+        finishedListEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay rutas finalizadas.</p>';
+    } else {
+        finishedRoutes.forEach(route => {
+            const tripCount = route.trips?.length || 0;
+            const total = formatPrice(route.totalPrice);
+            finishedListEl.innerHTML += `
+            <div class="p-3 bg-gray-100 rounded-lg border border-gray-300 opacity-80">
+                <div class="flex justify-between items-center mb-2">
+                <p class="font-semibold text-gray-600">Ruta #${route.id.slice(-4)} (${route.date})</p>
+                <span class="text-xs font-medium text-gray-600">${total}</span>
+                </div>
+                <p class="text-sm text-gray-600">Chofer: ${route.driverName}</p>
+                <p class="text-xs text-gray-500">${tripCount} Tramo(s)</p>
+                <div class="flex items-center justify-end mt-3 pt-2 border-t">
+                <button data-id="${route.id}" class="delete-route-btn text-red-500 hover:text-red-700 p-1 rounded-lg bg-red-100 btn-feedback" title="Eliminar Ruta">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+                </div>
+            </div>
+            `;
+        });
+    }
+
+    lucide.createIcons();
+    // Re-bind all card buttons
+    document.querySelectorAll('.plan-route-btn').forEach(btn => {
+        btn.removeEventListener('click', handlePlanRouteClick); // Remover listener previo
+        btn.addEventListener('click', handlePlanRouteClick);
+    });
+    document.querySelectorAll('.edit-route-btn').forEach(btn => {
+        btn.removeEventListener('click', handleStartEditRoute); // Remover listener previo
+        btn.addEventListener('click', handleStartEditRoute);
+    });
+    document.querySelectorAll('.finalize-route-btn-card').forEach(btn => {
+        btn.removeEventListener('click', handleFinalizeRouteFromCard); // Remover listener previo
+        btn.addEventListener('click', handleFinalizeRouteFromCard);
+    });
+    document.querySelectorAll('.delete-route-btn').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteRoute); // Remover listener previo
+        btn.addEventListener('click', handleDeleteRoute);
+    });
+}
+// NUEVA FUNCIÓN: Al hacer clic en "Planificar Ruta"
+function handlePlanRouteClick(e) {
+    e.stopPropagation();
+    const routeId = e.currentTarget.getAttribute('data-id');
+    currentRouteData = allRoutesData.find(r => r.id === routeId);
+    
+    // Cambiar a la pestaña "Asignación de Viajes"
+    document.getElementById('sub-tab-rutas-asignar').click();
+    
+    // Actualizar el contenido del planificador
+    updateRoutePlannerDetails(currentRouteData);
+    // Re-renderizar la lista de pendientes (para resaltar fechas)
+    renderPendingTripsList();
 }
 
-/* firebase init from modal */
-function initFirebaseFromConfig(cfg){
-  try{
-    if(!cfg || !cfg.apiKey) return alert('Config inválida');
-    firebase.initializeApp(cfg);
-    settings.firebaseEnabled = true; settings.firebaseConfig = cfg; localStorage.setItem(KEYS.settings, JSON.stringify(settings));
-    chkFirebase.checked = true;
-    processQueue();
-    alert('Firebase inicializado');
-  }catch(e){ alert('Error inicializando Firebase'); console.error(e); }
+// NUEVA FUNCIÓN: Actualiza el panel DERECHO de la pestaña "Asignación"
+function updateRoutePlannerDetails(route) {
+    const plannerContainer = document.getElementById('current-route-planner-container');
+    const plannerGuide = document.getElementById('route-planner-guide');
+    
+    if (!route) {
+        plannerGuide.classList.remove('hidden');
+        plannerContainer.classList.add('hidden');
+        currentRouteData = null;
+        renderPendingTripsList(); // Actualizar pendientes
+        return;
+    }
+    
+    plannerGuide.classList.add('hidden');
+    plannerContainer.classList.remove('hidden');
+    
+    plannerContainer.innerHTML = `
+        <div class="p-4 bg-yellow-50 border border-yellow-300 rounded-lg mb-4">
+            <p class="font-semibold text-gray-800">Ruta #${route.id.slice(-4)} (${route.date})</p>
+            <p class="text-sm text-gray-600"><i data-lucide="user-check" class="w-4 h-4 inline-block mr-1 text-primary"></i> ${route.driverName}</p>
+            <p class="text-sm text-gray-600"><i data-lucide="car-front" class="w-4 h-4 inline-block mr-1 text-accent"></i> ${route.vehicleModel} (${route.vehiclePlate})</p>
+            <p class="font-bold text-lg text-green-600 mt-2">Total Bruto: ${formatPrice(route.totalPrice)}</p>
+            <div class="mt-4 flex space-x-3">
+                <button id="view-route-ticket-btn" class="bg-primary text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center transition-all duration-150 btn-feedback" ${route.trips?.length === 0 ? 'disabled' : ''}>
+                <i data-lucide="eye" class="w-4 h-4 mr-2"></i> Ver Ticket Chofer
+                </button>
+            </div>
+        </div>
+        <h3 class="font-semibold text-gray-700 mt-6 mb-3 flex items-center">
+            <i data-lucide="list-ordered" class="w-4 h-4 mr-2 color-primary"></i> Tramos Asignados
+        </h3>
+        <div id="assigned-trips-list-planner" class="space-y-3 max-h-96 overflow-y-auto">
+            <!-- Tramos asignados se renderizarán aquí -->
+        </div>
+    `;
+
+    const assignedTripsEl = document.getElementById('assigned-trips-list-planner');
+    if (!route.trips || route.trips.length === 0) {
+        assignedTripsEl.innerHTML = '<p class="text-center text-gray-500 text-sm p-4 border border-dashed rounded-lg">Aún no hay tickets asignados a esta ruta.</p>';
+    } else {
+        const assignedTrips = allTripsData.filter(t => route.trips.includes(t.id));
+        assignedTrips.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        assignedTrips.forEach(trip => {
+            let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
+            if (trip.petSize && trip.petSize !== 'ninguno') petInfo += ` (${trip.petSize})`;
+            assignedTripsEl.innerHTML += `
+            <div class="p-3 bg-blue-50 border rounded-lg border-blue-200">
+                <div class="flex justify-between items-start">
+                <p class="font-semibold text-sm text-blue-700">#${trip.ticketId} - ${trip.clientName}</p>
+                <button data-trip-id="${trip.id}" data-route-id="${route.id}" class="remove-trip-from-route-btn text-red-500 hover:text-red-700 transition duration-150 btn-feedback">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+                </div>
+                <p class="text-xs text-gray-600">${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
+                <p class="text-xs text-gray-600">${petInfo}</p>
+                <span class="text-xs font-bold text-green-600">${formatPrice(trip.price)}</span>
+            </div>
+            `;
+        });
+    }
+
+    lucide.createIcons();
+    plannerContainer.querySelector('#view-route-ticket-btn')?.removeEventListener('click', handleViewRouteTicket); // Remover listener previo
+    plannerContainer.querySelector('#view-route-ticket-btn')?.addEventListener('click', handleViewRouteTicket);
+    assignedTripsEl.querySelectorAll('.remove-trip-from-route-btn').forEach(btn => {
+        btn.removeEventListener('click', handleRemoveTripFromRoute); // Remover listener previo
+        btn.addEventListener('click', handleRemoveTripFromRoute);
+    });
+}
+// Renderiza la lista de pendientes en la pestaña "Asignación"
+function renderPendingTripsList() {
+    const listEl = document.getElementById('pending-trips-list');
+    const guideEl = document.getElementById('pending-trips-guide');
+    if (!listEl || !guideEl) return;
+
+    listEl.innerHTML = '';
+    const loadingEl = document.getElementById('loading-pending-trips');
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    // CORREGIDO: Mostrar TODOS los tickets pendientes, ordenados por fecha
+    const availableTrips = allTripsData.filter(t => 
+        t.status === 'Activo' // Mostrar todos los activos
+    ).sort((a, b) => `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`));
+    
+    // Actualizar guía
+    if (!currentRouteData) {
+        guideEl.textContent = '↓ 1. Haz clic en una ruta (en la pestaña "Rutas Creadas") para planificarla.';
+    } else {
+        guideEl.textContent = `↓ 2. Añade tickets para la ruta del ${currentRouteData.date}.`;
+    }
+
+    if (availableTrips.length === 0) {
+        listEl.innerHTML = `<p class="text-center text-gray-500 text-sm p-3 border border-dashed rounded-lg">No hay tickets pendientes.</p>`;
+        return;
+    }
+    
+    availableTrips.forEach(trip => {
+        let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
+        if (trip.petSize && trip.petSize !== 'ninguno') petInfo += ` (${trip.petSize})`;
+        const isCurrentRouteSelected = currentRouteData !== null;
+        
+        // CORREGIDO: Lógica de resaltado y "grayed out"
+        let cardClasses = 'border-gray-200';
+        let buttonDisabled = !isCurrentRouteSelected;
+        let buttonTitle = isCurrentRouteSelected ? 'Añadir a ruta seleccionada' : 'Selecciona una ruta activa primero';
+        let dateMismatch = false;
+
+        if (trip.isAssigned) {
+            cardClasses = 'border-gray-300 opacity-50 pointer-events-none'; // Grisado
+            buttonDisabled = true;
+            buttonTitle = "Ya asignado a otra ruta";
+        } else if (currentRouteData && trip.date !== currentRouteData.date) {
+            cardClasses = 'border-red-300'; // Fecha no coincide
+            dateMismatch = true;
+        } else if (currentRouteData && trip.date === currentRouteData.date) {
+            cardClasses = 'border-green-300'; // Fecha coincide
+        }
+        
+        listEl.innerHTML += `
+        <div class="p-3 bg-gray-50 border-2 rounded-lg ${cardClasses} flex justify-between items-center">
+            <div>
+            <p class="font-semibold text-sm text-gray-700">${trip.clientName}</p>
+            <p class="text-xs text-gray-500">${trip.date || 'Sin fecha'} - ${trip.time || 'Sin hora'} | De: ${trip.localityOrigin} a: ${trip.localityDest}</p>
+            <p class="text-xs text-gray-500">${petInfo}</p>
+            ${dateMismatch ? `<p class="text-xs font-bold text-red-600">La fecha no coincide con la ruta</p>` : ''}
+            </div>
+            <button data-trip-id="${trip.id}" class="assign-trip-to-route-btn bg-green-500 text-white text-xs font-medium py-1 px-3 rounded-lg hover:bg-green-600 transition duration-150 btn-feedback" ${buttonDisabled ? 'disabled' : ''} title="${buttonTitle}">
+            <i data-lucide="plus" class="w-4 h-4 inline-block mr-1"></i> Añadir
+            </button>
+        </div>
+        `;
+    });
+    lucide.createIcons();
+    document.querySelectorAll('.assign-trip-to-route-btn').forEach(btn => {
+        btn.removeEventListener('click', handleAssignTripToRoute); // Remover listener previo
+        btn.addEventListener('click', handleAssignTripToRoute);
+    });
+}
+async function handleAssignTripToRoute(e) {
+    if (!currentRouteData) { showStatus('Debe seleccionar una ruta activa primero.', 'error'); return; }
+    const tripId = e.currentTarget.getAttribute('data-trip-id');
+    const trip = allTripsData.find(t => t.id === tripId);
+    if (!trip) return;
+    const collectionPath = ROUTES_COLLECTION();
+    const tripCollectionPath = TRIPS_COLLECTION();
+    if (!collectionPath || !tripCollectionPath) return;
+
+    // Advertir si la fecha no coincide, pero permitirlo
+    if (trip.date !== currentRouteData.date) {
+        if (!confirm(`ADVERTENCIA: El ticket es del ${trip.date} y la ruta es del ${currentRouteData.date}. ¿Asignar de todas formas?`)) {
+            return; // Cancelar si el usuario no confirma
+        }
+    }
+
+    const currentTrips = Array.isArray(currentRouteData.trips) ? currentRouteData.trips : [];
+    // CORRECCIÓN: Evitar duplicados
+    if (currentTrips.includes(tripId)) {
+        showStatus("Este ticket ya está asignado a esta ruta.", "error");
+        return;
+    }
+    
+    const currentPrice = currentRouteData.totalPrice || 0;
+    const newTotalPrice = currentPrice + (trip.price || 0);
+    const newTripsArray = [..currentTrips, tripId];
+
+    try {
+        const routeRef = doc(db, collectionPath, currentRouteData.id);
+        const tripRef = doc(db, tripCollectionPath, tripId);
+        const batch = writeBatch(db);
+        batch.update(routeRef, { trips: newTripsArray, totalPrice: newTotalPrice });
+        batch.update(tripRef, { isAssigned: true, assignedRouteId: currentRouteData.id });
+        await batch.commit();
+        showStatus(`Ticket ${trip.ticketId} asignado a Ruta #${currentRouteData.id.slice(-4)}`, 'success');
+        // No es necesario remover la tarjeta, onSnapshot actualizará la lista de pendientes
+    } catch (error) { console.error("Error al asignar viaje a ruta:", error); showStatus('Error al asignar viaje a ruta: ' + error.message, 'error'); }
+}
+async function handleRemoveTripFromRoute(e) {
+    if (!currentRouteData) { return; }
+    const tripId = e.currentTarget.getAttribute('data-trip-id');
+    const routeId = e.currentTarget.getAttribute('data-route-id');
+    const trip = allTripsData.find(t => t.id === tripId);
+    if (!trip || trip.assignedRouteId !== routeId) return;
+    const routeCollectionPath = ROUTES_COLLECTION();
+    const tripCollectionPath = TRIPS_COLLECTION();
+    if (!routeCollectionPath || !tripCollectionPath) return;
+
+    const currentPrice = currentRouteData.totalPrice || 0;
+    const tripPrice = trip.price || 0;
+    const newTotalPrice = Math.max(0, currentPrice - tripPrice);
+    const currentTrips = Array.isArray(currentRouteData.trips) ? currentRouteData.trips : [];
+    const newTripsArray = currentTrips.filter(id => id !== tripId);
+
+    if (confirm(`¿Seguro que deseas desasignar el viaje de ${trip.clientName} de la ruta #${routeId.slice(-4)}? El ticket volverá a estar pendiente.`)) {
+        try {
+            const routeRef = doc(db, routeCollectionPath, routeId);
+            const tripRef = doc(db, tripCollectionPath, tripId);
+            const batch = writeBatch(db);
+            batch.update(routeRef, { trips: newTripsArray, totalPrice: newTotalPrice });
+            batch.update(tripRef, { isAssigned: false, assignedRouteId: null });
+            await batch.commit();
+            showStatus(`Ticket ${trip.ticketId} desasignado y marcado como pendiente.`, 'success');
+        } catch (error) { console.error("Error al desasignar viaje:", error); showStatus('Error al desasignar viaje: ' + error.message, 'error'); }
+    }
+}
+async function handleFinalizeRouteFromDetails(e) {
+    const routeId = e.currentTarget.getAttribute('data-id');
+    const route = allRoutesData.find(r => r.id === routeId);
+    if (!route) { showStatus('Error: Ruta no encontrada.', 'error'); return; }
+    const routeCollectionPath = ROUTES_COLLECTION();
+    const tripCollectionPath = TRIPS_COLLECTION();
+    if (!routeCollectionPath || !tripCollectionPath) return;
+    const tripCount = route.trips?.length || 0;
+
+    if (confirm(`¿Quieres finalizar la Ruta #${route.id.slice(-4)}? Todos sus ${tripCount} viajes asignados también se marcarán como finalizados.`)) {
+        try {
+            const batch = writeBatch(db);
+            if (Array.isArray(route.trips)) {
+                // CORREGIDO: Verificar si el trip existe antes de intentar actualizarlo
+                const existingTripIds = allTripsData.map(t => t.id);
+                route.trips.forEach(tripId => {
+                    if (existingTripIds.includes(tripId)) {
+                        const tripRef = doc(db, tripCollectionPath, tripId);
+                        batch.update(tripRef, { status: 'Finalizado' });
+                    }
+                });
+            }
+            const routeRef = doc(db, routeCollectionPath, routeId);
+            batch.update(routeRef, { status: 'Finalizada', finishedAt: serverTimestamp() });
+            await batch.commit();
+            if (currentRouteData && currentRouteData.id === routeId) {
+                currentRouteData = null;
+                updateRoutePlannerDetails(null); // Limpiar planificador
+            }
+            showStatus(`Ruta #${routeId.slice(-4)} finalizada con éxito.`, 'success');
+        } catch (error) { console.error("Error al finalizar ruta:", error); showStatus('Error al finalizar ruta: ' + error.message, 'error'); }
+    }
 }
 
-/* ---------- small utilities & modal ---------- */
-function showModal(title, html){ modalTitle.textContent = title; modalBody.innerHTML = html; modal.style.display = 'flex'; }
-function hideModal(){ modal.style.display = 'none'; }
-modalClose.addEventListener('click', hideModal);
 
-/* ticket search area */
-function renderTicketsArea(){
-  ticketsArea.innerHTML = ''; const q = (qTickets.value||'').toLowerCase();
-  const arr = trips.filter(t=> !q || (t.clientName||'').toLowerCase().includes(q) || (t.localityOrigin||'').toLowerCase().includes(q));
-  if(!arr.length){ ticketsArea.innerHTML = '<div class="muted">No hay viajes</div>'; return; }
-  arr.forEach(t=>{
-    const div = document.createElement('div'); div.className='card'; div.style.marginBottom='8px';
-    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${esc(t.clientName)}</strong><div class="muted">${esc(t.date)} ${esc(t.time)} · ${esc(t.localityOrigin)}→${esc(t.localityDest)}</div></div><div style="display:flex;gap:8px;"><button class="btn btn-ghost btn-ticket-open" data-id="${t.id}">Opciones</button></div></div>`;
-    ticketsArea.appendChild(div);
-  });
-  ticketsArea.querySelectorAll('.btn-ticket-open').forEach(b=> b.onclick = e=> openTicketOptions(e.currentTarget.dataset.id));
+// --- LÓGICA DEL MODAL DE TICKET ---
+// REMOVIDO: Gemini
+function generateRouteTicket(route) {
+    const routeTrips = allTripsData.filter(t => route.trips?.includes(t.id));
+    routeTrips.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    let routeDetailsText = ''; let routeDetailsHtml = '';
+    
+    // CORRECCIÓN: Evitar suma duplicada. Calcular el total desde los trips filtrados.
+    let calculatedTotalPrice = 0;
+
+    routeTrips.forEach((trip, index) => {
+        calculatedTotalPrice += trip.price || 0; // Sumar precio
+        let petInfoText = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
+        if (trip.petSize && trip.petSize !== 'ninguno') petInfoText += ` (${trip.petSize})`;
+        routeDetailsText += `\n*TRAMO ${index + 1}* (Boleto #${trip.ticketId})\nCliente: ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})\n${petInfoText}\n- Recogida (Hora Aprox.): ${trip.time || 'Sin hora'}\n- Origen: ${trip.addressOrigin}, ${trip.localityOrigin}\n- Destino: ${trip.addressDest}, ${trip.localityDest}\n- Precio Cliente: ${formatPrice(trip.price)}\n------------------------------------\n`;
+        routeDetailsHtml += `<div class="border-t border-gray-200 pt-3 mt-3"><p class="section-title">TRAMO ${index + 1} (Boleto #${trip.ticketId})</p><p><strong>Cliente:</strong> ${trip.clientName} (Tel: ${trip.clientPhone || 'N/A'})</p><p><strong>Info:</strong> ${petInfoText}</p><p><strong>Recogida (Aprox):</strong> ${trip.time || 'Sin hora'}</p><p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p><p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p><p class="highlight">Precio Cliente: ${formatPrice(trip.price)}</p></div>`;
+    });
+    
+    // Usar el total calculado en lugar del de la ruta (que podía estar desactualizado)
+    const totalBruto = formatPrice(calculatedTotalPrice); 
+    
+    const text = `*MG Transporte - TICKET DE RUTA #${route.id.slice(-4)}* (FECHA: ${route.date})\n*DATOS DEL CHOFER Y VEHÍCULO*\n- *Chofer:* ${route.driverName} (DNI: ${route.driverDni})\n- *Teléfono Chofer:* ${route.driverPhone}\n- *Vehículo:* ${route.vehicleModel} ${route.vehicleColor}\n- *Patente:* ${route.vehiclePlate}\n------------------------------------\n*PUNTOS DE RECOGIDA E DESTINO (Ordenado por Hora)*${routeDetailsText}\n*TOTAL BRUTO DE RUTA:* ${totalBruto}\n¡Buena ruta!`.trim();
+    // REMOVIDO: ${geminiSummary.html}
+    const html = `<div class="printable-ticket"><h4><i data-lucide="route" class="icon"></i>TICKET DE RUTA #${route.id.slice(-4)}</h4><p class="section-title">Chofer y Vehículo (Fecha: ${route.date})</p><p><strong>Chofer:</strong> ${route.driverName} (DNI: ${route.driverDni})</p><p><strong>Teléfono Chofer:</strong> ${route.driverPhone}</p><p><strong>Vehículo:</strong> ${route.vehicleModel} ${route.vehicleColor} (${route.vehiclePlate})</p><div class="mt-4"><p class="section-title">Tramos Asignados</p>${routeDetailsHtml}</div><div class="border-t border-gray-300 pt-3 mt-4"><p class="text-lg font-bold">TOTAL BRUTO RUTA: ${totalBruto}</p></div></div>`.trim();
+    return { html, text };
 }
-
-/* ---------- startup render ---------- */
-function renderBackups(){ backupsList.innerHTML=''; if(!backups.length) backupsList.innerHTML='<div class="muted">Sin backups</div>'; backups.forEach(bk=>{ const div=document.createElement('div'); div.className='card'; div.style.marginBottom='8px'; div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${bk.ts}</strong><div class="muted">${bk.note}</div></div><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-dl" data-id="${bk.id}">Descargar</button><button class="btn btn-ghost btn-restore" data-id="${bk.id}">Restaurar</button></div></div>`; backupsList.appendChild(div); }); backupsList.querySelectorAll('.btn-dl').forEach(b=> b.onclick = e=> { const id=e.currentTarget.dataset.id; const bk=backups.find(x=> x.id===id); if(!bk) return; const wb = buildWorkbook(bk.data); downloadWorkbook(wb, `backup_${bk.ts}.xlsx`); }); backupsList.querySelectorAll('.btn-restore').forEach(b=> b.onclick = e=> { if(!confirm('Restaurar backup?')) return; const id=e.currentTarget.dataset.id; const bk=backups.find(x=> x.id===id); if(!bk) return; trips=bk.data.trips||[]; drivers=bk.data.drivers||[]; vehicles=bk.data.vehicles||[]; clients=bk.data.clients||[]; routes=bk.data.routes||[]; persistAll(); renderAll(); alert('Backup restaurado'); }); document.getElementById('backupCount').textContent = backups.length; }
-
-/* render all */
-function renderAll(){ renderTrips(); renderPending(); renderDrivers(); renderVehicles(); renderClients(); renderSavedRoutes(); renderRouteBuilder(); renderTicketsArea(); renderBackups(); }
-
-/* buttons wiring */
-qTrips.addEventListener('input', renderTrips);
-filterState.addEventListener('change', renderTrips);
-btnResetForm.addEventListener('click', resetForm);
-document.getElementById('btnExportPlan').addEventListener('click', exportPlanilla);
-document.getElementById('btnExportJSON').addEventListener('click', exportJSON);
-document.getElementById('btnImportJSON').addEventListener('click', importJSON);
-document.getElementById('btnBackupNow').addEventListener('click', ()=> { doBackup('manual'); alert('Backup descargado'); });
-
-document.getElementById('btnOptimize').addEventListener('click', ()=> {
-  if(!currentRoute) return alert('Crea una ruta primero');
-  currentRoute.stops.sort((a,b)=> ((trips.find(x=>x.id===a).date||'')+' '+(trips.find(x=>x.id===a).time||'')).localeCompare((trips.find(x=>x.id===b).date||'')+' '+(trips.find(x=>x.id===b).time||'')); renderRouteBuilder(); updateMapForRoute();
+function generateClientTicket(trip, routeData = null) {
+    let driverInfoText = "Este ticket está PENDIENTE de asignación de ruta/chofer. La confirmación final se enviará con los datos del chofer y vehículo.";
+    let driverInfoHtml = `<p class="pending">PENDIENTE DE ASIGNACIÓN de ruta/chofer. La confirmación final se enviará con los datos del chofer y vehículo.</p>`;
+    if (routeData) {
+        driverInfoText = `\n*DATOS DEL MÓVIL ASIGNADO:*\n- *Chofer:* ${routeData.driverName}\n- *Teléfono Chofer:* ${routeData.driverPhone}\n- *Vehículo:* ${routeData.vehicleModel} ${routeData.vehicleColor}\n- *Patente:* ${routeData.vehiclePlate}\n- *Ruta Asignada:* #${routeData.id.slice(-4)}`.trim();
+        driverInfoHtml = `<p><strong>Chofer:</strong> ${routeData.driverName}</p><p><strong>Teléfono Chofer:</strong> ${routeData.driverPhone}</p><p><strong>Vehículo:</strong> ${routeData.vehicleModel} ${routeData.vehicleColor} (${routeData.vehiclePlate})</p>`.trim();
+    }
+    let petInfo = `Pasajeros: ${trip.pasajeros || 1} | Mascotas: ${trip.mascotas || 0}`;
+    if (trip.petSize && trip.petSize !== 'ninguno') petInfo += ` (${trip.petSize})`;
+    const text = `¡Confirmación de Viaje con MG Transporte! 🚗 Puerta a Puerta 🚪\nHola ${trip.clientName}, tu viaje ha sido registrado (Ticket #${trip.ticketId}).\n*DETALLES DE TU VIAJE:*\n- *Fecha:* ${trip.date}\n- *Horario Aprox. Recogida:* ${trip.time || 'Sin hora'}\n- *Info:* ${petInfo}\n- *Punto de Recogida:* ${trip.addressOrigin}, ${trip.localityOrigin}\n- *Destino final:* ${trip.addressDest}, ${trip.localityDest}\n- *Precio final:* ${formatPrice(trip.price)}\n${driverInfoText}\nEl chofer te contactará al llegar al punto de recogida.\n¡Gracias por elegir MG Transporte!`.trim();
+    const html = `<div class="printable-ticket"><h4><i data-lucide="ticket" class="icon"></i>Confirmación de Viaje (Ticket #${trip.ticketId})</h4><p class="section-title">Pasajero</p><p><strong>Nombre:</strong> ${trip.clientName}</p><p><strong>Teléfono:</strong> ${trip.clientPhone || 'N/A'}</p><p class="section-title mt-4">Detalles del Viaje</p><p><strong>Fecha:</strong> ${trip.date}</p><p><strong>Hora Aprox:</strong> ${trip.time || 'Sin hora'}</p><p><strong>Info:</strong> ${petInfo}</p><p><strong>Origen:</strong> ${trip.addressOrigin}, ${trip.localityOrigin}</p><p><strong>Destino:</strong> ${trip.addressDest}, ${trip.localityDest}</p><p class="highlight">Precio Final: ${formatPrice(trip.price)}</p><p class="section-title mt-4">Datos del Chofer Asignado</p>${driverInfoHtml}</div>`.trim();
+    return { html, text };
+}
+async function showClientTicketModal(tripData) {
+    const routeData = tripData.assignedRouteId ? allRoutesData.find(r => r.id === tripData.assignedRouteId) : null;
+    modalTicketData.client = generateClientTicket(tripData, routeData);
+    if (routeData) {
+        // REMOVIDO: Gemini
+        modalTicketData.driver = generateRouteTicket(routeData); // Sin geminiSummary
+    } else {
+        modalTicketData.driver = { html: '<p class="p-4 text-center text-gray-600">Pendiente de asignación.</p>', text: 'Pendiente.' };
+    }
+    document.getElementById('modal-content-client').innerHTML = modalTicketData.client.html;
+    document.getElementById('modal-content-driver').innerHTML = modalTicketData.driver.html;
+    document.getElementById('modal-tab-client').classList.add('active');
+    document.getElementById('modal-tab-driver').classList.remove('active');
+    document.getElementById('modal-content-client').classList.remove('hidden');
+    document.getElementById('modal-content-driver').classList.add('hidden');
+    document.getElementById('modal-tab-driver').textContent = routeData ? 'Ticket Ruta' : 'Ticket Chofer (Pendiente)';
+    document.getElementById('ticket-modal').dataset.activeTab = 'client';
+    document.getElementById('ticket-modal').classList.remove('hidden');
+    lucide.createIcons();
+}
+async function handleViewRouteTicket(e) {
+    if (!currentRouteData) { return; }
+    const button = e.currentTarget; 
+    button.disabled = true; // Deshabilitar
+    try {
+        // REMOVIDO: Gemini
+        modalTicketData.driver = generateRouteTicket(currentRouteData); // Sin geminiSummary
+        modalTicketData.client = { html: '<p class="p-4">Use "Tickets" para ticket cliente.</p>', text: 'No disponible.' };
+        
+        document.getElementById('modal-content-client').innerHTML = modalTicketData.client.html;
+        document.getElementById('modal-content-driver').innerHTML = modalTicketData.driver.html;
+        document.getElementById('modal-tab-client').classList.remove('active');
+        document.getElementById('modal-tab-driver').classList.add('active');
+        document.getElementById('modal-content-client').classList.add('hidden');
+        document.getElementById('modal-content-driver').classList.remove('hidden');
+        document.getElementById('modal-tab-driver').textContent = 'Ticket Ruta';
+        document.getElementById('ticket-modal').dataset.activeTab = 'driver';
+        document.getElementById('ticket-modal').classList.remove('hidden');
+        lucide.createIcons();
+    } catch (error) { console.error("Error:", error); showStatus("Error al generar ticket.", "error"); }
+    finally { button.disabled = false; lucide.createIcons(); } // Habilitar
+}
+document.getElementById('close-modal-btn')?.addEventListener('click', () => { document.getElementById('ticket-modal').classList.add('hidden'); });
+document.getElementById('modal-tab-client')?.addEventListener('click', (e) => { 
+    document.querySelectorAll('#ticket-modal .modal-tab-button').forEach(btn => btn.classList.remove('active')); e.currentTarget.classList.add('active'); document.getElementById('modal-content-client').classList.remove('hidden'); document.getElementById('modal-content-driver').classList.add('hidden'); document.getElementById('ticket-modal').dataset.activeTab = 'client';
+});
+document.getElementById('modal-tab-driver')?.addEventListener('click', (e) => { 
+    document.querySelectorAll('#ticket-modal .modal-tab-button').forEach(btn => btn.classList.remove('active')); e.currentTarget.classList.add('active'); document.getElementById('modal-content-driver').classList.remove('hidden'); document.getElementById('modal-content-client').classList.add('hidden'); document.getElementById('ticket-modal').dataset.activeTab = 'driver';
+});
+function getActiveTicketText() { const activeTab = document.getElementById('ticket-modal').dataset.activeTab || 'client'; return modalTicketData[activeTab].text; }
+document.getElementById('print-ticket-btn')?.addEventListener('click', () => { window.print(); });
+document.getElementById('copy-message-btn')?.addEventListener('click', () => { 
+    const textToCopy = getActiveTicketText(); try { const textArea = document.createElement("textarea"); textArea.value = textToCopy; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; textArea.style.opacity = 0; document.body.appendChild(textArea); textArea.focus(); textArea.select(); document.execCommand('copy'); showStatus('Texto copiado.', 'success'); document.body.removeChild(textArea); } catch (err) { console.error('Error copy:', err); showStatus('Error copy.', 'error'); }
+});
+document.getElementById('share-whatsapp-btn')?.addEventListener('click', () => { 
+    const text = getActiveTicketText(); const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`; window.open(whatsappUrl, '_blank');
+});
+document.getElementById('share-email-btn')?.addEventListener('click', () => { 
+    const text = getActiveTicketText(); const subject = "Confirmación Viaje - MG Transporte"; const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`; window.open(mailtoUrl, '_blank');
 });
 
-/* search ticket */
-document.getElementById('btnSearchTicket').addEventListener('click', ()=> renderTicketsArea());
-qTickets.addEventListener('input', renderTicketsArea);
 
-/* modal firebase config */
-btnSetFirebase.addEventListener('click', ()=> {
-  showModal('Configurar Firebase', `<div style="display:flex;flex-direction:column;gap:8px"><div class="muted">Pega aquí el objeto de configuración (JSON) de Firebase:</div><textarea id="fbConf" rows="8" class="w-full p-2"></textarea><div style="display:flex;gap:8px"><button id="fbSave" class="btn btn-primary">Guardar y conectar</button><button id="fbClear" class="btn">Cerrar</button></div></div>`);
-  document.getElementById('fbSave').addEventListener('click', ()=> { try{ const cfg = JSON.parse(document.getElementById('fbConf').value); initFirebaseFromConfig(cfg); hideModal(); }catch(e){ alert('JSON inválido'); } });
-  document.getElementById('fbClear').addEventListener('click', hideModal);
-});
-
-/* auto backup scheduling (daily at approx midnight) */
-function scheduleDaily(){
-  if(Number(autoBackup.value) <= 0) return;
-  const now = new Date(); const next = new Date(now); next.setHours(24,0,10,0);
-  const ms = next - now;
-  setTimeout(()=>{ doBackup('nightly'); setInterval(()=> doBackup('nightly'), 24*3600*1000); }, ms + 1000);
-}
-autoBackup.value = settings.autoBackup || 1;
-autoBackup.addEventListener('change', ()=> { settings.autoBackup = Number(autoBackup.value); localStorage.setItem(KEYS.settings, JSON.stringify(settings)); if(settings.autoBackup>0) scheduleDaily(); });
-
-/* simple online/offline */
-window.addEventListener('online', ()=> { syncStatus.textContent = 'Online'; processQueue(); });
-window.addEventListener('offline', ()=> { syncStatus.textContent = 'Offline'; });
-
-/* initial data demo helper (only if empty) */
-function loadSampleIfEmpty(){
-  if(trips.length || drivers.length || vehicles.length || clients.length) return;
-  drivers = [{ id: uid(), name:'Juan López', phone:'115555000' }];
-  vehicles = [{ id: uid(), model:'Renault Kangoo', plate:'ABC123' }];
-  clients = [{ id: uid(), name:'María P', phone:'115000111' }];
-  trips = [
-    { id: uid(), clientName:'María P', phone:'115000111', addressOrigin:'Av. Colón 123', localityOrigin:'Mar del Plata', addressDest:'Av. Costanera 200', localityDest:'Mar del Plata', date:'2025-12-20', time:'08:00', price:25000, passengers:1, pet:'none', minors:'no', service:'compartido', notes:'', isAssigned:false, assignedRouteId:null, status:'Activo', createdAt: nowISO() }
-  ];
-  persistAll();
-}
-
-/* startup */
-function initApp(){ loadSampleIfEmpty(); renderAll(); scheduleDaily(); if(settings.firebaseEnabled && settings.firebaseConfig && Object.keys(settings.firebaseConfig).length) initFirebaseFromConfig(settings.firebaseConfig); }
-initApp();
+// --- INICIO (Llamada inicial a setupTabs se movió dentro de onAuthStateChanged) ---
+lucide.createIcons(); // Renderizar iconos iniciales (login)
 
 </script>
 </body>
